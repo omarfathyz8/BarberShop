@@ -12,6 +12,12 @@ export interface DashboardStats {
   completedAppointments: number;
 }
 
+export interface DailyRevenue {
+  date: string;
+  revenue: number;
+  appointmentCount: number;
+}
+
 export interface MonthlyRevenue {
   month: string;
   revenue: number;
@@ -22,6 +28,19 @@ export interface ServicePopularity {
   serviceName: string;
   count: number;
   revenue: number;
+}
+
+export interface WorkerPerformance {
+  workerName: string;
+  appointmentCount: number;
+  revenue: number;
+  completedAppointments: number;
+}
+
+export interface ServiceRevenue {
+  serviceName: string;
+  revenue: number;
+  appointmentCount: number;
 }
 
 export async function getDashboardStats(
@@ -48,6 +67,33 @@ export async function getDashboardStats(
     approvedAppointments,
     completedAppointments: cancelledAppointments,
   };
+}
+
+export function getDailyRevenue(
+  appointments: (Appointment & { firebaseId: string })[]
+): DailyRevenue[] {
+  const dailyData = new Map<string, { revenue: number; count: number }>();
+
+  appointments.forEach((apt) => {
+    if (apt.status === 'completed') {
+      const date = new Date(apt.dateTime);
+      const day = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+      const existing = dailyData.get(day) || { revenue: 0, count: 0 };
+      existing.revenue += apt.totalPrice;
+      existing.count += 1;
+      dailyData.set(day, existing);
+    }
+  });
+
+  return Array.from(dailyData.entries())
+    .map(([date, data]) => ({
+      date,
+      revenue: data.revenue,
+      appointmentCount: data.count,
+    }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(-30);
 }
 
 export function getMonthlyRevenue(
@@ -117,6 +163,77 @@ export async function getServicePopularity(
     })
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
+}
+
+export async function getWorkerPerformance(
+  ownerId: string,
+  appointments: (Appointment & { firebaseId: string })[]
+): Promise<WorkerPerformance[]> {
+  const workers = await getWorkers(ownerId);
+  const workerMap = new Map(workers.map((w) => [w.firebaseId, w]));
+
+  const workerStats = new Map<string, { count: number; revenue: number; completed: number }>();
+
+  appointments.forEach((apt) => {
+    const existing = workerStats.get(apt.workerId) || { count: 0, revenue: 0, completed: 0 };
+    existing.count += 1;
+    if (apt.status === 'completed') {
+      existing.revenue += apt.totalPrice;
+      existing.completed += 1;
+    }
+    workerStats.set(apt.workerId, existing);
+  });
+
+  return Array.from(workerStats.entries())
+    .map(([workerId, stats]) => {
+      const worker = workerMap.get(workerId);
+      return {
+        workerName: worker?.name || 'Unknown',
+        appointmentCount: stats.count,
+        revenue: stats.revenue,
+        completedAppointments: stats.completed,
+      };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
+export async function getServiceRevenue(
+  ownerId: string,
+  appointments: (Appointment & { firebaseId: string })[]
+): Promise<ServiceRevenue[]> {
+  const allServices = await getAllWorkerServices(ownerId);
+  const serviceMap = new Map<string, Service & { firebaseId: string }>();
+
+  allServices.forEach((services) => {
+    services.forEach((service) => {
+      serviceMap.set(service.firebaseId, service);
+    });
+  });
+
+  const serviceStatsByName = new Map<string, { revenue: number; count: number }>();
+
+  appointments.forEach((apt) => {
+    if (apt.status === 'completed') {
+      apt.selectedServices.forEach((serviceId) => {
+        const service = serviceMap.get(serviceId);
+        if (service) {
+          const existing = serviceStatsByName.get(service.name) || { revenue: 0, count: 0 };
+          existing.revenue += service.price;
+          existing.count += 1;
+          serviceStatsByName.set(service.name, existing);
+        }
+      });
+    }
+  });
+
+  return Array.from(serviceStatsByName.entries())
+    .map(([serviceName, stats]) => ({
+      serviceName,
+      revenue: stats.revenue,
+      appointmentCount: stats.count,
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 15);
 }
 
 export function getRecentAppointments(

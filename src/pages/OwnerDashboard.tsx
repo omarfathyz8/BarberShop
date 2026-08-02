@@ -7,6 +7,7 @@ import { WorkerManagement } from '../components/WorkerManagement';
 import { ServiceManagement } from '../components/ServiceManagement';
 import { AppointmentManagement } from '../components/AppointmentManagement';
 import { CustomerList } from '../components/CustomerList';
+import { AnalyticsCharts } from '../components/AnalyticsCharts';
 import { Card } from '../components/ui/Card';
 import { formatDateTime } from '../lib/utils';
 import {
@@ -297,6 +298,16 @@ export function OwnerDashboard() {
 
       {currentTab === 'customers' && (
         <CustomerList ownerId={ownerId} />
+      )}
+
+      {currentTab === 'analytics' && (
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Analytics & Reports</h1>
+            <p className="text-gray-600 mt-2">Monitor your business performance with detailed analytics</p>
+          </div>
+          <AnalyticsCharts appointments={appointments} ownerId={ownerId} />
+        </div>
       )}
     </DashboardLayout>
   );

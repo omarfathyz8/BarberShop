@@ -300,9 +300,8 @@ src/
 - [ ] Appointment reminders (email/SMS)
 - ✅ Email integration for notifications
 - [ ] SMS notifications via Twilio
-- [ ] Advanced analytics (charts, monthly revenue, service popularity)
+- ✅ Advanced analytics (charts, monthly revenue, service popularity)
 - [ ] Export functionality (CSV/PDF reports)
-- [ ] Appointment notes and history
 - [ ] Customer feedback system
 
 ### Phase 3 (Future)
