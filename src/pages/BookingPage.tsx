@@ -8,9 +8,11 @@ import { BookingStep2ServiceSelection } from '../components/BookingStep2ServiceS
 import { BookingStep3DateTimeSelection } from '../components/BookingStep3DateTimeSelection';
 import { BookingReview } from '../components/BookingReview';
 import { branding } from '../config/branding';
+import { sendEmail, generateAppointmentConfirmationEmail } from '../services/brevoService';
 import * as workerService from '../services/workerService';
 import * as serviceService from '../services/serviceService';
 import * as appointmentService from '../services/appointmentService';
+import * as customerService from '../services/customerService';
 import type { Worker, Service, Appointment } from '../types';
 
 type BookingStep = 2 | 3 | 4;
@@ -239,6 +241,42 @@ export function BookingPage() {
         };
 
         await appointmentService.createAppointment(ownerId, appointmentData);
+
+        // Send confirmation email
+        try {
+          const customer = await customerService.getCustomer(user.id);
+          const appointmentDate = new Date(appointmentDateTime);
+          const formattedDate = appointmentDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          const formattedTime = appointmentDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          });
+
+          const serviceNames = currentServices.map(s => s.name).join(', ');
+
+          const htmlContent = generateAppointmentConfirmationEmail(
+            customer?.name || 'Customer',
+            currentWorker?.name || 'Barber',
+            formattedDate,
+            formattedTime,
+            serviceNames
+          );
+
+          await sendEmail({
+            to: [{ email: user.email, name: customer?.name }],
+            subject: 'Appointment Confirmation - BarberHub',
+            htmlContent
+          });
+        } catch (emailError) {
+          console.error('Error sending confirmation email:', emailError);
+          // Don't fail the booking if email fails
+        }
 
         showToast('Booking confirmed! Your appointment is pending approval.', 'success');
       }
