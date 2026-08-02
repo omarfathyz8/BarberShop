@@ -1,7 +1,7 @@
 {
-  "name": "barbershop-saas",
-  "description": "Production-ready MVP for a multi-tenant barbershop booking platform",
-  "version": "0.1.0",
+  "name": "barbershop",
+  "description": "Grow your barbershop business with BarberHub - appointment booking, staff management, customer analytics, and revenue tracking",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "scripts": {
