@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ref, get } from 'firebase/database';
+import { db } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../contexts/ToastContext';
 import { Button } from '../components/ui/Button';
@@ -24,7 +26,22 @@ export function CustomerAppointmentsPage() {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const storedOwnerId = localStorage.getItem('currentShopOwnerId');
+        let storedOwnerId: string | null = localStorage.getItem('currentShopOwnerId');
+
+        // If not in localStorage, fetch from Firebase (for customers on new devices)
+        if (!storedOwnerId) {
+          try {
+            const shopConfigSnapshot = await get(ref(db, 'shopConfig/currentOwnerId'));
+            if (shopConfigSnapshot.exists()) {
+              storedOwnerId = shopConfigSnapshot.val();
+              if (storedOwnerId) {
+                localStorage.setItem('currentShopOwnerId', storedOwnerId);
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching owner ID from Firebase:', error);
+          }
+        }
 
         if (!storedOwnerId) {
           showToast('Shop not configured', 'error');
@@ -58,9 +75,15 @@ export function CustomerAppointmentsPage() {
 
   const now = Date.now();
   const categorizedAppointments = {
-    upcoming: appointments.filter((apt) => apt.dateTime >= now && apt.status !== 'cancelled'),
-    past: appointments.filter((apt) => apt.dateTime < now && apt.status !== 'cancelled'),
-    cancelled: appointments.filter((apt) => apt.status === 'cancelled'),
+    upcoming: appointments
+      .filter((apt) => apt.dateTime >= now && apt.status !== 'cancelled')
+      .sort((a, b) => a.dateTime - b.dateTime),
+    past: appointments
+      .filter((apt) => apt.dateTime < now && apt.status !== 'cancelled')
+      .sort((a, b) => b.dateTime - a.dateTime),
+    cancelled: appointments
+      .filter((apt) => apt.status === 'cancelled')
+      .sort((a, b) => b.dateTime - a.dateTime),
   };
 
   const displayAppointments = categorizedAppointments[tab];
