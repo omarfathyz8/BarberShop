@@ -15,11 +15,7 @@ const schema = z.object({
   email: z.string().email('Invalid email'),
   phone: z.string().min(10, 'Invalid phone number'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-  role: z.enum(['customer', 'worker', 'owner'] as const),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+  role: z.enum(['customer', 'owner'] as const),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -77,8 +73,8 @@ export function RegisterPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input
-            label="Full Name"
-            placeholder="John Doe"
+            label="Name"
+            placeholder="Enter your name"
             error={errors.name?.message}
             {...register('name')}
           />
@@ -86,16 +82,24 @@ export function RegisterPage() {
           <Input
             label="Email"
             type="email"
-            placeholder="your@email.com"
+            placeholder="Enter your email"
             error={errors.email?.message}
             {...register('email')}
           />
 
           <Input
             label="Phone"
-            placeholder="+1 (555) 123-4567"
+            placeholder="Enter your phone number"
             error={errors.phone?.message}
             {...register('phone')}
+          />
+
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Enter your password"
+            error={errors.password?.message}
+            {...register('password')}
           />
 
           <div>
@@ -105,27 +109,10 @@ export function RegisterPage() {
               {...register('role')}
             >
               <option value="customer">Customer</option>
-              <option value="worker">Barber/Worker</option>
               <option value="owner">Shop Owner</option>
             </select>
             {errors.role && <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>}
           </div>
-
-          <Input
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-
-          <Input
-            label="Confirm Password"
-            type="password"
-            placeholder="••••••••"
-            error={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-          />
 
           <Button type="submit" isLoading={isLoading} className="w-full">
             Create Account
