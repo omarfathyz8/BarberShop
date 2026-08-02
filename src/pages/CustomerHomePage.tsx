@@ -21,6 +21,7 @@ export function CustomerHomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [ownerId, setOwnerId] = useState<string>('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -102,8 +103,35 @@ export function CustomerHomePage() {
               Logout
             </Button>
           </div>
-          <button className="md:hidden text-gray-600">☰</button>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden text-gray-600 text-2xl p-2 hover:text-gray-900"
+          >
+            ☰
+          </button>
         </div>
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-white border-t px-4 py-3 space-y-2">
+            <button
+              onClick={() => {
+                navigate('/customer/appointments');
+                setIsMobileMenuOpen(false);
+              }}
+              className="block w-full text-left text-gray-600 hover:text-gray-900 font-medium py-2"
+            >
+              My Appointments
+            </button>
+            <button
+              onClick={() => {
+                handleLogout();
+                setIsMobileMenuOpen(false);
+              }}
+              className="block w-full text-left text-gray-600 hover:text-gray-900 font-medium py-2"
+            >
+              Logout
+            </button>
+          </div>
+        )}
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
