@@ -43,14 +43,14 @@ export function CustomerList({ ownerId }: CustomerListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-900">Customers</h2>
         <input
           type="text"
           placeholder="Search customers..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+          className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg text-sm"
         />
       </div>
 
@@ -63,54 +63,85 @@ export function CustomerList({ ownerId }: CustomerListProps) {
           </p>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                  Phone
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                  Appointments
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {customer.name}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
+        <>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Phone
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Appointments
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.map((customer) => (
+                  <tr key={customer.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      {customer.name}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <a
+                        href={`mailto:${customer.email}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      >
+                        {customer.email}
+                      </a>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <a
+                        href={`tel:${customer.phone}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      >
+                        {customer.phone}
+                      </a>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {customer.appointmentsCount || 0}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden space-y-3">
+            {filtered.map((customer) => (
+              <Card key={customer.id} className="p-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-semibold text-gray-900">{customer.name}</h3>
+                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      {customer.appointmentsCount || 0} apt
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-sm">
                     <a
                       href={`mailto:${customer.email}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline block truncate"
                     >
-                      {customer.email}
+                      📧 {customer.email}
                     </a>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
                     <a
                       href={`tel:${customer.phone}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline block"
                     >
-                      {customer.phone}
+                      📞 {customer.phone}
                     </a>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {customer.appointmentsCount || 0}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -212,18 +212,18 @@ export function OwnerDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Upcoming Appointments
+                ⏳ Pending Appointments
               </h3>
               <div className="space-y-3">
                 {appointments
-                  .filter((apt) => apt.dateTime >= Date.now() && apt.status !== 'cancelled')
+                  .filter((apt) => apt.dateTime >= Date.now() && apt.status === 'pending')
                   .sort((a, b) => a.dateTime - b.dateTime)
                   .slice(0, 5)
                   .map((apt) => {
                     return (
                       <div
                         key={apt.firebaseId}
-                        className="flex justify-between items-center p-3 bg-gray-50 rounded"
+                        className="flex justify-between items-center p-3 bg-yellow-50 rounded border border-yellow-200"
                       >
                         <div>
                           <p className="text-sm font-semibold text-gray-900">
@@ -233,32 +233,50 @@ export function OwnerDashboard() {
                             {apt.totalPrice.toFixed(2)} LE
                           </p>
                         </div>
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            apt.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : apt.status === 'approved'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {apt.status}
+                        <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                          pending
                         </span>
                       </div>
                     );
                   })}
+                {appointments.filter((apt) => apt.dateTime >= Date.now() && apt.status === 'pending').length === 0 && (
+                  <p className="text-sm text-gray-600 text-center py-4">No pending appointments</p>
+                )}
               </div>
             </Card>
 
             <Card className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Popular Services
+                ✅ Approved Appointments
               </h3>
               <div className="space-y-3">
-                {/* Services will be shown when data is loaded */}
-                <p className="text-sm text-gray-600">
-                  Monitor your most popular services
-                </p>
+                {appointments
+                  .filter((apt) => apt.dateTime >= Date.now() && apt.status === 'approved')
+                  .sort((a, b) => a.dateTime - b.dateTime)
+                  .slice(0, 5)
+                  .map((apt) => {
+                    return (
+                      <div
+                        key={apt.firebaseId}
+                        className="flex justify-between items-center p-3 bg-green-50 rounded border border-green-200"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {formatDateTime(apt.dateTime)}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {apt.totalPrice.toFixed(2)} LE
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                          approved
+                        </span>
+                      </div>
+                    );
+                  })}
+                {appointments.filter((apt) => apt.dateTime >= Date.now() && apt.status === 'approved').length === 0 && (
+                  <p className="text-sm text-gray-600 text-center py-4">No approved appointments</p>
+                )}
               </div>
             </Card>
           </div>

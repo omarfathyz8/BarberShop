@@ -19,18 +19,25 @@ export function AppointmentManagement({
   onUpdateStatus,
 }: AppointmentManagementProps) {
   const [filter, setFilter] = useState<AppointmentStatus | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'status'>('status');
   const [loading, setLoading] = useState<string | null>(null);
 
   const filtered = appointments.filter(
     (apt) => filter === 'all' || apt.status === filter
   );
 
+  const statusOrder: Record<AppointmentStatus, number> = {
+    pending: 0,
+    approved: 1,
+    completed: 2,
+    cancelled: 3,
+  };
+
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === 'date') {
       return b.dateTime - a.dateTime;
     }
-    return a.status.localeCompare(b.status);
+    return statusOrder[a.status] - statusOrder[b.status];
   });
 
   const getStatusColor = (status: AppointmentStatus) => {
@@ -80,6 +87,7 @@ export function AppointmentManagement({
               <option value="all">All</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
+              <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>

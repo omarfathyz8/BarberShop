@@ -323,11 +323,10 @@ export function WorkerManagement({
                 📋 Worker Login Instructions:
               </p>
               <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
-                <li>Go to login page at http://localhost:5175/login</li>
-                <li>Enter the email address above</li>
-                <li>Enter the temporary password above</li>
+                <li>Go to login page at <a href="https://barber-shop8.vercel.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">https://barber-shop8.vercel.app</a></li>
+                <li>Enter the email address and the temporary password above</li>
                 <li>Click "Sign In"</li>
-                <li>Change password on first login (optional but recommended)</li>
+                <li>Change password on first login</li>
               </ol>
             </div>
 
@@ -336,7 +335,6 @@ export function WorkerManagement({
               <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
                 <li>These credentials expire in 7 days</li>
                 <li>Worker should change password after first login</li>
-                <li>Keep this information secure</li>
               </ul>
             </div>
 
