@@ -1,5 +1,11 @@
 {
   "rules": {
+    "shopConfig": {
+      ".read": true,
+      "currentOwnerId": {
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'"
+      }
+    },
     "users": {
       ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'",
       "$uid": {

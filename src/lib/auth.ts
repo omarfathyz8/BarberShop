@@ -55,7 +55,12 @@ export async function registerUser(
   if (role === 'owner') {
     localStorage.setItem('currentShopOwnerId', user.uid);
     // Store globally so customers can access it from any device
-    await set(ref(db, 'shopConfig/currentOwnerId'), user.uid);
+    try {
+      await set(ref(db, 'shopConfig/currentOwnerId'), user.uid);
+    } catch (error) {
+      console.error('Error storing owner ID globally:', error);
+      // Don't fail registration if this fails
+    }
   }
 
   return userData;
@@ -117,7 +122,12 @@ export async function loginUser(email: string, password: string): Promise<Fireba
       localStorage.setItem('ownerId', credential.user.uid);
       // Store as current shop for customers (both locally and globally)
       localStorage.setItem('currentShopOwnerId', credential.user.uid);
-      await set(ref(db, 'shopConfig/currentOwnerId'), credential.user.uid);
+      try {
+        await set(ref(db, 'shopConfig/currentOwnerId'), credential.user.uid);
+      } catch (error) {
+        console.error('Error storing owner ID globally:', error);
+        // Don't fail login if this fails
+      }
     } else if (userData && userData.role === 'worker') {
       // Worker data should be in the user record
       const workerUser = userData as any;

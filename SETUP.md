@@ -62,6 +62,12 @@ npm install
 ```json
 {
   "rules": {
+    "shopConfig": {
+      ".read": true,
+      "currentOwnerId": {
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'"
+      }
+    },
     "users": {
       "$uid": {
         ".read": "$uid === auth.uid || root.child('users').child($uid).child('role').val() === 'owner'",

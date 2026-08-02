@@ -21,7 +21,7 @@ export function AppointmentsList({
   isLoading = false,
 }: AppointmentsListProps) {
   const [filter, setFilter] = useState<'all' | 'today' | 'upcoming'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'completed' | 'cancelled'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'cancelled'>('all');
   const [loadingAppointmentId, setLoadingAppointmentId] = useState<string | null>(null);
 
   const now = Date.now();
@@ -46,8 +46,6 @@ export function AppointmentsList({
         return 'bg-yellow-100 text-yellow-800';
       case 'approved':
         return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -97,7 +95,7 @@ export function AppointmentsList({
         </div>
 
         <div className="flex gap-2">
-          {(['all', 'pending', 'approved', 'completed', 'cancelled'] as const).map((s) => (
+          {(['all', 'pending', 'approved', 'cancelled'] as const).map((s) => (
             <Button
               key={s}
               variant={statusFilter === s ? 'primary' : 'secondary'}
