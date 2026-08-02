@@ -1,0 +1,351 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { auth } from '../config/firebase';
+import { useToast } from '../contexts/ToastContext';
+import { WorkerLayout } from '../components/WorkerLayout';
+import { WorkerStats } from '../components/WorkerStats';
+import { AppointmentsList } from '../components/AppointmentsList';
+import { AppointmentDetail } from '../components/AppointmentDetail';
+import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
+import { WorkerScheduleDialog } from '../components/WorkerScheduleDialog';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import * as appointmentService from '../services/appointmentService';
+import * as serviceService from '../services/serviceService';
+import * as workerService from '../services/workerService';
+import type { Appointment, Service, Worker, WorkingHours } from '../types';
+
+export function WorkerDashboard() {
+  console.log('WorkerDashboard component mounted');
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
+  const [currentTab, setCurrentTab] = useState('appointments');
+  const [isLoading, setIsLoading] = useState(true);
+  const [appointments, setAppointments] = useState<(Appointment & { firebaseId: string })[]>([]);
+  const [services, setServices] = useState<(Service & { firebaseId: string })[]>([]);
+  const [worker, setWorker] = useState<(Worker & { firebaseId: string }) | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<(Appointment & { firebaseId: string }) | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+
+  // Get current user's UID and worker ID
+  const currentUser = auth.currentUser;
+  console.log('Current user:', currentUser?.email);
+  if (!currentUser) {
+    console.log('No current user, redirecting to login');
+    navigate('/login');
+    return null;
+  }
+  console.log('Current user authenticated:', currentUser.email);
+
+  useEffect(() => {
+    const loadWorkerData = async () => {
+      try {
+        console.log('=== WorkerDashboard loadWorkerData starting ===');
+        setIsLoading(true);
+
+        // Check if this is first login (temp password was used)
+        const isFirstLogin = localStorage.getItem('workerFirstLogin') !== 'false';
+        if (isFirstLogin) {
+          setShowPasswordDialog(true);
+          localStorage.setItem('workerFirstLogin', 'false');
+        }
+
+        // First, try to get worker data from localStorage (cached from owner dashboard or login)
+        const cachedWorkerData = localStorage.getItem('workerData');
+        const cachedOwnerId = localStorage.getItem('ownerId');
+
+        if (!cachedOwnerId) {
+          showToast('Owner ID not found. Please login again.', 'error');
+          navigate('/login');
+          return;
+        }
+
+        let workerId: string;
+        let ownerId: string = cachedOwnerId;
+
+        // Get workerId from localStorage
+        if (!cachedWorkerData) {
+          console.error('Worker data not found in localStorage');
+          showToast('Worker session invalid. Please login again.', 'error');
+          navigate('/login');
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(cachedWorkerData);
+          workerId = parsed.workerId;
+          console.log('Parsed workerData from localStorage:', parsed);
+          console.log('Loaded worker from localStorage:', { workerId, ownerId });
+          console.log('About to fetch worker with:', { ownerId, workerId });
+        } catch (e) {
+          console.error('Failed to parse worker data from localStorage:', e);
+          showToast('Invalid worker data. Please login again.', 'error');
+          navigate('/login');
+          return;
+        }
+
+        // Fetch worker details
+        console.log('Fetching worker with ownerId:', ownerId, 'workerId:', workerId);
+        const workerData = await workerService.getWorker(ownerId, workerId);
+        console.log('Fetched worker data:', workerData);
+        if (workerData) {
+          console.log('Setting worker:', { name: workerData.name, workerId: workerData.firebaseId });
+          setWorker(workerData);
+        } else {
+          console.error('No worker data returned for:', { ownerId, workerId });
+        }
+
+        // Fetch worker's appointments
+        const workerAppointments = await appointmentService.getWorkerAppointments(ownerId, workerId);
+        setAppointments(workerAppointments);
+
+        // Fetch worker's services
+        const workerServices = await serviceService.getWorkerServices(ownerId, workerId);
+        setServices(workerServices);
+      } catch (error) {
+        console.error('Error loading worker data:', error);
+        showToast('Failed to load worker data', 'error');
+      } finally {
+        console.log('=== WorkerDashboard loading complete ===');
+        setIsLoading(false);
+      }
+    };
+
+    loadWorkerData();
+  }, [navigate, showToast]);
+
+  const handleApprove = async (appointmentId: string) => {
+    try {
+      setActionLoading(true);
+      const cachedOwnerId = localStorage.getItem('ownerId');
+      const cachedWorkerData = localStorage.getItem('workerData');
+
+      if (!cachedOwnerId || !cachedWorkerData) {
+        showToast('Session expired. Please login again.', 'error');
+        navigate('/login');
+        return;
+      }
+
+      await appointmentService.updateAppointmentStatus(cachedOwnerId, appointmentId, 'approved');
+
+      // Update local state
+      setAppointments((prev) =>
+        prev.map((apt) =>
+          apt.firebaseId === appointmentId ? { ...apt, status: 'approved' } : apt
+        )
+      );
+
+      if (selectedAppointment?.firebaseId === appointmentId) {
+        setSelectedAppointment({
+          ...selectedAppointment,
+          status: 'approved',
+        });
+      }
+
+      showToast('Appointment approved!', 'success');
+    } catch (error) {
+      console.error('Error approving appointment:', error);
+      showToast('Failed to approve appointment', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleComplete = async (appointmentId: string) => {
+    try {
+      setActionLoading(true);
+      const cachedOwnerId = localStorage.getItem('ownerId');
+
+      if (!cachedOwnerId) {
+        showToast('Session expired. Please login again.', 'error');
+        navigate('/login');
+        return;
+      }
+
+      await appointmentService.updateAppointmentStatus(cachedOwnerId, appointmentId, 'completed');
+
+      // Update local state
+      setAppointments((prev) =>
+        prev.map((apt) =>
+          apt.firebaseId === appointmentId ? { ...apt, status: 'completed' as any } : apt
+        )
+      );
+
+      if (selectedAppointment?.firebaseId === appointmentId) {
+        setSelectedAppointment({
+          ...selectedAppointment,
+          status: 'completed' as any,
+        });
+      }
+
+      showToast('Appointment marked as completed!', 'success');
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+      showToast('Failed to complete appointment', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateSchedule = async (workingHours: WorkingHours) => {
+    try {
+      const cachedOwnerId = localStorage.getItem('ownerId');
+      const cachedWorkerData = localStorage.getItem('workerData');
+
+      if (!cachedOwnerId || !cachedWorkerData) {
+        showToast('Session expired. Please login again.', 'error');
+        navigate('/login');
+        return;
+      }
+
+      const { workerId } = JSON.parse(cachedWorkerData);
+      await workerService.updateWorkerWorkingHours(cachedOwnerId, workerId, workingHours);
+
+      // Update local state
+      setWorker((prev) =>
+        prev
+          ? {
+              ...prev,
+              workingHours,
+            }
+          : null
+      );
+
+      showToast('Schedule updated successfully!', 'success');
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      showToast('Failed to update schedule', 'error');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <WorkerLayout currentTab={currentTab} onTabChange={setCurrentTab}>
+        <div className="flex justify-center items-center h-screen">
+          <p className="text-gray-500 text-lg">Loading dashboard...</p>
+        </div>
+      </WorkerLayout>
+    );
+  }
+
+  return (
+    <WorkerLayout
+      currentTab={currentTab}
+      onTabChange={setCurrentTab}
+      workerName={worker?.name || 'Worker'}
+    >
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
+          <p className="text-gray-600 mt-1">Manage your appointments and schedule</p>
+        </div>
+
+        <WorkerStats appointments={appointments} />
+
+        {currentTab === 'appointments' && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">My Appointments</h2>
+            <AppointmentsList
+              appointments={appointments}
+              onSelectAppointment={setSelectedAppointment}
+              onApprove={handleApprove}
+              onComplete={handleComplete}
+              isLoading={false}
+            />
+          </div>
+        )}
+
+        {currentTab === 'schedule' && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">My Schedule</h2>
+              <Button onClick={() => setShowScheduleDialog(true)}>Edit Schedule</Button>
+            </div>
+            <Card className="p-6">
+              {worker ? (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Working Hours</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(worker.workingHours || {}).map(([day, hours]: [string, any]) => (
+                        <div key={day} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                          <span className="font-medium capitalize text-gray-900">{day}</span>
+                          {hours.isOpen ? (
+                            <span className="text-gray-600">
+                              {hours.start} - {hours.end}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Closed</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Services</h3>
+                    {services.length === 0 ? (
+                      <p className="text-gray-500">No services assigned yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {services.map((service) => (
+                          <Card key={service.firebaseId} className="p-4 bg-gray-50">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold text-gray-900">{service.name}</p>
+                                <p className="text-sm text-gray-600">{service.description}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-gray-900">{service.price.toFixed(2)} LE</p>
+                                <p className="text-sm text-gray-600">{service.duration} mins</p>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500">Unable to load schedule information</p>
+              )}
+            </Card>
+          </div>
+        )}
+
+        <AppointmentDetail
+          appointment={selectedAppointment}
+          services={services}
+          onClose={() => setSelectedAppointment(null)}
+          onApprove={
+            selectedAppointment?.status === 'pending'
+              ? () => handleApprove(selectedAppointment.firebaseId)
+              : undefined
+          }
+          onComplete={
+            selectedAppointment?.status === 'approved'
+              ? () => handleComplete(selectedAppointment.firebaseId)
+              : undefined
+          }
+          isLoading={actionLoading}
+        />
+
+        <ChangePasswordDialog
+          isOpen={showPasswordDialog}
+          onClose={() => setShowPasswordDialog(false)}
+        />
+
+        <WorkerScheduleDialog
+          isOpen={showScheduleDialog}
+          workingHours={worker?.workingHours}
+          onSave={handleUpdateSchedule}
+          onClose={() => setShowScheduleDialog(false)}
+          isLoading={actionLoading}
+        />
+      </div>
+    </WorkerLayout>
+  );
+}

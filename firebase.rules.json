@@ -1,0 +1,51 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'owner'",
+      "$uid": {
+        ".read": "$uid === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'owner'",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "workers": {
+      "$ownerId": {
+        ".read": true,
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'",
+        "$workerId": {
+          ".read": true,
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner' || auth.uid !== null"
+        }
+      }
+    },
+    "services": {
+      "$ownerId": {
+        ".read": true,
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'",
+        "$workerId": {
+          ".read": true,
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'",
+          "$serviceId": {
+            ".read": true,
+            ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'"
+          }
+        }
+      }
+    },
+    "appointments": {
+      "$ownerId": {
+        ".read": true,
+        ".write": "auth != null",
+        "$appointmentId": {
+          ".read": "root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('appointments').child($ownerId).child($appointmentId).child('workerId').val() === auth.uid || root.child('appointments').child($ownerId).child($appointmentId).child('customerId').val() === auth.uid",
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('appointments').child($ownerId).child($appointmentId).child('customerId').val() === auth.uid"
+        }
+      }
+    },
+    "temporaryCredentials": {
+      ".read": true,
+      "$encodedEmail": {
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'"
+      }
+    }
+  }
+}

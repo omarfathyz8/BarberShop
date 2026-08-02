@@ -1,0 +1,353 @@
+import { useState } from 'react';
+import type { Worker, WorkingHours, Service, Appointment } from '../types';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Dialog } from './ui/Dialog';
+
+interface WorkerManagementProps {
+  workers: (Worker & { firebaseId: string })[];
+  services?: Map<string, (Service & { firebaseId: string })[]>;
+  appointments?: (Appointment & { firebaseId: string })[];
+  onAddWorker: (data: Omit<Worker, 'id'>, tempPassword: string) => Promise<void>;
+  onUpdateWorker: (workerId: string, data: Partial<Worker>) => Promise<void>;
+  onDeleteWorker: (workerId: string) => Promise<void>;
+}
+
+const DEFAULT_HOURS: WorkingHours = {
+  monday: { start: '00:00', end: '00:00', isOpen: false },
+  tuesday: { start: '11:00', end: '21:00', isOpen: true },
+  wednesday: { start: '11:00', end: '21:00', isOpen: true },
+  thursday: { start: '11:00', end: '21:00', isOpen: true },
+  friday: { start: '11:00', end: '21:00', isOpen: true },
+  saturday: { start: '11:00', end: '21:00', isOpen: true },
+  sunday: { start: '11:00', end: '21:00', isOpen: true },
+};
+
+export function WorkerManagement({
+  workers,
+  services,
+  appointments,
+  onAddWorker,
+  onUpdateWorker,
+  onDeleteWorker,
+}: WorkerManagementProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    bio: '',
+  });
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [workerCredentials, setWorkerCredentials] = useState<{
+    email: string;
+    tempPassword: string;
+  } | null>(null);
+
+  const handleOpenDialog = (worker?: Worker & { firebaseId: string }) => {
+    if (worker) {
+      setEditingId(worker.firebaseId);
+      setFormData({
+        name: worker.name,
+        email: worker.email,
+        phone: worker.phone,
+        bio: worker.bio,
+      });
+    } else {
+      setEditingId(null);
+      setFormData({ name: '', email: '', phone: '', bio: '' });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      if (editingId) {
+        await onUpdateWorker(editingId, formData);
+        setIsDialogOpen(false);
+        setFormData({ name: '', email: '', phone: '', bio: '' });
+      } else {
+        // Generate temporary password for new worker
+        const tempPassword = Math.random().toString(36).substring(2, 10) +
+                            Math.random().toString(36).substring(2, 10);
+
+        console.log('Adding worker with email:', formData.email);
+
+        await onAddWorker(
+          {
+            ...formData,
+            role: 'worker',
+            workingHours: DEFAULT_HOURS,
+          } as Omit<Worker, 'id'>,
+          tempPassword
+        );
+
+        console.log('Worker added successfully, showing credentials');
+
+        // Show credentials dialog with temp password
+        setWorkerCredentials({
+          email: formData.email,
+          tempPassword,
+        });
+        setShowCredentials(true);
+
+        // Close the add worker dialog
+        setIsDialogOpen(false);
+        setFormData({ name: '', email: '', phone: '', bio: '' });
+      }
+    } catch (error) {
+      console.error('Error saving worker:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Workers Management</h2>
+        <Button onClick={() => handleOpenDialog()}>+ Add Worker</Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {workers.map((worker) => {
+          const workerAppointments = appointments?.filter(
+            (apt) => apt.workerId === worker.firebaseId && apt.status !== 'cancelled'
+          ) || [];
+          const workerServices = services?.get(worker.firebaseId) || [];
+
+          return (
+            <Card key={worker.firebaseId} className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">{worker.name}</h3>
+                  <a
+                    href={`tel:${worker.phone}`}
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                  >
+                    {worker.phone}
+                  </a>
+                  <a
+                    href={`mailto:${worker.email}`}
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block"
+                  >
+                    {worker.email}
+                  </a>
+                </div>
+                <p className="text-sm text-gray-700">{worker.bio}</p>
+
+                <div className="grid grid-cols-2 gap-3 py-3 border-y border-gray-200">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">{workerAppointments.length}</p>
+                    <p className="text-xs text-gray-600">Appointments</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{workerServices.length}</p>
+                    <p className="text-xs text-gray-600">Services</p>
+                  </div>
+                </div>
+
+                {workerServices.length > 0 && (
+                  <div className="bg-gray-50 rounded p-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Services:</p>
+                    <div className="space-y-1">
+                      {workerServices.slice(0, 3).map((service) => (
+                        <p key={service.firebaseId} className="text-xs text-gray-600">
+                          • {service.name}
+                        </p>
+                      ))}
+                      {workerServices.length > 3 && (
+                        <p className="text-xs text-gray-500 font-medium">
+                          +{workerServices.length - 3} more
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex space-x-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={async () => {
+                    // Try to fetch credentials from database
+                    try {
+                      const { getTemporaryCredentials } = await import('../services/workerService');
+                      const creds = await getTemporaryCredentials(worker.email);
+                      if (creds) {
+                        setWorkerCredentials({
+                          email: worker.email,
+                          tempPassword: creds.tempPassword,
+                        });
+                      } else {
+                        setWorkerCredentials({
+                          email: worker.email,
+                          tempPassword: '(No temporary password stored)',
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error fetching credentials:', error);
+                      setWorkerCredentials({
+                        email: worker.email,
+                        tempPassword: '(Error retrieving password)',
+                      });
+                    }
+                    setShowCredentials(true);
+                  }}
+                >
+                  Credentials
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleOpenDialog(worker)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="text-red-600 hover:bg-red-50"
+                  onClick={() => onDeleteWorker(worker.firebaseId)}
+                >
+                  Delete
+                </Button>
+              </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold">
+            {editingId ? 'Edit Worker' : 'Add New Worker'}
+          </h3>
+
+          <div className="space-y-3">
+            <Input
+              label="Name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+            />
+            <Input
+              label="Phone"
+              value={formData.phone}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
+            />
+            <Input
+              label="Bio"
+              value={formData.bio}
+              onChange={(e) =>
+                setFormData({ ...formData, bio: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={loading}>
+              {loading ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {showCredentials && workerCredentials && (
+        <Dialog open={showCredentials} onOpenChange={setShowCredentials}>
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-green-600">✅ Worker Added Successfully!</h3>
+
+            <p className="text-gray-700 font-medium">
+              Share these login credentials with the worker:
+            </p>
+
+            <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2">📧 Email:</p>
+                <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-300">
+                  <p className="font-mono text-sm font-bold text-blue-600">{workerCredentials.email}</p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(workerCredentials.email);
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2">🔐 Temporary Password:</p>
+                <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-300">
+                  <p className="font-mono text-sm font-bold text-red-600">{workerCredentials.tempPassword}</p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(workerCredentials.tempPassword);
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-gray-700">
+                📋 Worker Login Instructions:
+              </p>
+              <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
+                <li>Go to login page at http://localhost:5175/login</li>
+                <li>Enter the email address above</li>
+                <li>Enter the temporary password above</li>
+                <li>Click "Sign In"</li>
+                <li>Change password on first login (optional but recommended)</li>
+              </ol>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-yellow-900">⚠️ Important:</p>
+              <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
+                <li>These credentials expire in 7 days</li>
+                <li>Worker should change password after first login</li>
+                <li>Keep this information secure</li>
+              </ul>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={() => setShowCredentials(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
+    </div>
+  );
+}

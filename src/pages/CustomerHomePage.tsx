@@ -1,0 +1,169 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../contexts/ToastContext';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { branding } from '../config/branding';
+import { logoutUser } from '../lib/auth';
+import * as workerService from '../services/workerService';
+import * as serviceService from '../services/serviceService';
+import type { Worker, Service } from '../types';
+
+export function CustomerHomePage() {
+  const navigate = useNavigate();
+  useAuth(); // Check authentication
+  const { showToast } = useToast();
+
+  const [workers, setWorkers] = useState<(Worker & { firebaseId: string })[]>([]);
+  const [allServices, setAllServices] = useState<Map<string, (Service & { firebaseId: string })[]>>(new Map());
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [ownerId, setOwnerId] = useState<string>('');
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Try to get owner ID from multiple sources:
+        // 1. URL parameter (if passed from somewhere)
+        // 2. localStorage (from owner login)
+        // 3. Default owner (for MVP, we can use a hardcoded ID or first available)
+
+        let ownerIdToUse = localStorage.getItem('currentShopOwnerId');
+
+        // If no owner ID is stored, we need to find one
+        // For MVP, we can try to load the owner ID from the auth context or use a default
+        if (!ownerIdToUse) {
+          // In a real app, this would be configured or passed from the owner's setup
+          // For now, we'll try to get it from the owner's login session
+          const cachedOwnerId = localStorage.getItem('ownerId');
+          if (cachedOwnerId) {
+            // Check if this is an owner (not a worker)
+            const isOwner = !localStorage.getItem('workerData');
+            if (isOwner) {
+              ownerIdToUse = cachedOwnerId;
+              localStorage.setItem('currentShopOwnerId', cachedOwnerId);
+            }
+          }
+        }
+
+        if (ownerIdToUse) {
+          const workersData = await workerService.getWorkers(ownerIdToUse);
+          setWorkers(workersData);
+          setOwnerId(ownerIdToUse);
+
+          const servicesData = await serviceService.getAllWorkerServices(ownerIdToUse);
+          setAllServices(servicesData);
+        } else {
+          showToast('Shop not configured. Please have the owner configure the shop first.', 'error');
+        }
+      } catch (error) {
+        console.error('Error loading barbers:', error);
+        showToast('Failed to load barbers', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [showToast]);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    localStorage.removeItem('currentShopOwnerId');
+    navigate('/login');
+  };
+
+  const filteredWorkers = workers.filter(
+    (worker) =>
+      worker.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      worker.bio.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/customer/home')}>
+            <span className="text-2xl">{branding.logo}</span>
+            <h1 className="text-xl font-bold text-gray-900">{branding.shopName}</h1>
+          </div>
+          <div className="hidden md:flex items-center gap-4">
+            <button
+              onClick={() => navigate('/customer/appointments')}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
+              My Appointments
+            </button>
+            <Button onClick={handleLogout} variant="outline" size="sm">
+              Logout
+            </Button>
+          </div>
+          <button className="md:hidden text-gray-600">☰</button>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Our Barbers</h2>
+          <p className="text-gray-600 mb-6">
+            Select a barber to view their services and book an appointment
+          </p>
+
+          <Input
+            placeholder="Search barbers by name or specialty..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+
+        {isLoading ? (
+          <div className="text-center text-gray-500 py-12">Loading barbers...</div>
+        ) : filteredWorkers.length === 0 ? (
+          <div className="text-center text-gray-500 py-12">
+            {searchTerm ? 'No barbers match your search' : 'No barbers available yet'}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredWorkers.map((worker) => (
+              <Card
+                key={worker.firebaseId}
+                className="hover:shadow-md transition-shadow flex flex-col p-5"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{worker.name}</h3>
+                <p className="text-sm text-gray-600 mb-3">{worker.bio}</p>
+
+                {allServices.get(worker.firebaseId) && allServices.get(worker.firebaseId)!.length > 0 && (
+                  <div className="mb-4 pb-3 border-b">
+                    <div className="space-y-1">
+                      {allServices.get(worker.firebaseId)!.slice(0, 2).map((service) => (
+                        <p key={service.firebaseId} className="text-sm text-gray-600 flex justify-between">
+                          <span>{service.name}</span>
+                          <span className="text-blue-600 font-medium">{service.price.toFixed(2)} LE</span>
+                        </p>
+                      ))}
+                      {allServices.get(worker.firebaseId)!.length > 2 && (
+                        <p className="text-xs text-gray-500">+{allServices.get(worker.firebaseId)!.length - 2} more</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => navigate('/book', { state: { selectedWorkerId: worker.firebaseId, ownerId } })}
+                  className="w-full mt-auto"
+                >
+                  Book Now
+                </Button>
+              </Card>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
