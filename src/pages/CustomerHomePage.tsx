@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ref, get } from 'firebase/database';
+import { db } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../contexts/ToastContext';
 import { Button } from '../components/ui/Button';
@@ -29,25 +31,24 @@ export function CustomerHomePage() {
         setIsLoading(true);
 
         // Try to get owner ID from multiple sources:
-        // 1. URL parameter (if passed from somewhere)
-        // 2. localStorage (from owner login)
-        // 3. Default owner (for MVP, we can use a hardcoded ID or first available)
+        // 1. localStorage (from owner login on this device)
+        // 2. Firebase (global shop configuration - accessible from any device)
 
-        let ownerIdToUse = localStorage.getItem('currentShopOwnerId');
+        let ownerIdToUse: string | null = localStorage.getItem('currentShopOwnerId');
 
-        // If no owner ID is stored, we need to find one
-        // For MVP, we can try to load the owner ID from the auth context or use a default
+        // If not in localStorage, fetch from Firebase (for customers on new devices)
         if (!ownerIdToUse) {
-          // In a real app, this would be configured or passed from the owner's setup
-          // For now, we'll try to get it from the owner's login session
-          const cachedOwnerId = localStorage.getItem('ownerId');
-          if (cachedOwnerId) {
-            // Check if this is an owner (not a worker)
-            const isOwner = !localStorage.getItem('workerData');
-            if (isOwner) {
-              ownerIdToUse = cachedOwnerId;
-              localStorage.setItem('currentShopOwnerId', cachedOwnerId);
+          try {
+            const shopConfigSnapshot = await get(ref(db, 'shopConfig/currentOwnerId'));
+            if (shopConfigSnapshot.exists()) {
+              ownerIdToUse = shopConfigSnapshot.val();
+              // Cache it locally for future use
+              if (ownerIdToUse) {
+                localStorage.setItem('currentShopOwnerId', ownerIdToUse);
+              }
             }
+          } catch (error) {
+            console.error('Error fetching owner ID from Firebase:', error);
           }
         }
 

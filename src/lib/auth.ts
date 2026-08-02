@@ -51,9 +51,11 @@ export async function registerUser(
   // Store user data for authentication
   await set(ref(db, `users/${user.uid}`), userData);
 
-  // If registering as owner, store as current shop
+  // If registering as owner, store as current shop (both locally and globally)
   if (role === 'owner') {
     localStorage.setItem('currentShopOwnerId', user.uid);
+    // Store globally so customers can access it from any device
+    await set(ref(db, 'shopConfig/currentOwnerId'), user.uid);
   }
 
   return userData;
@@ -113,8 +115,9 @@ export async function loginUser(email: string, password: string): Promise<Fireba
 
     if (userData && userData.role === 'owner') {
       localStorage.setItem('ownerId', credential.user.uid);
-      // Store as current shop for customers
+      // Store as current shop for customers (both locally and globally)
       localStorage.setItem('currentShopOwnerId', credential.user.uid);
+      await set(ref(db, 'shopConfig/currentOwnerId'), credential.user.uid);
     } else if (userData && userData.role === 'worker') {
       // Worker data should be in the user record
       const workerUser = userData as any;

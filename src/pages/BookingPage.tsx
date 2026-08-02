@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ref, get } from 'firebase/database';
+import { db } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../contexts/ToastContext';
 import { Button } from '../components/ui/Button';
@@ -70,17 +72,30 @@ export function BookingPage() {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        // Use passed owner ID if available, otherwise fall back to localStorage
-        const ownerToUse = passedOwnerId || localStorage.getItem('currentShopOwnerId');
+        // Use passed owner ID if available, otherwise fall back to localStorage, then Firebase
+        let ownerToUse: string | null = passedOwnerId || localStorage.getItem('currentShopOwnerId');
+
+        // If still no owner ID, fetch from Firebase (for customers on new devices)
+        if (!ownerToUse) {
+          try {
+            const shopConfigSnapshot = await get(ref(db, 'shopConfig/currentOwnerId'));
+            if (shopConfigSnapshot.exists()) {
+              ownerToUse = shopConfigSnapshot.val();
+              // Cache it locally for future use
+              if (ownerToUse) {
+                localStorage.setItem('currentShopOwnerId', ownerToUse);
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching owner ID from Firebase:', error);
+          }
+        }
 
         if (!ownerToUse) {
           showToast('Shop not configured', 'error');
           navigate('/customer/home');
           return;
         }
-
-        // Store the owner ID for future use
-        localStorage.setItem('currentShopOwnerId', ownerToUse);
 
         const workersData = await workerService.getWorkers(ownerToUse);
         setWorkers(workersData);
