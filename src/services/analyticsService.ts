@@ -10,6 +10,7 @@ export interface DashboardStats {
   pendingAppointments: number;
   approvedAppointments: number;
   completedAppointments: number;
+  cancelledAppointments: number;
 }
 
 export interface DailyRevenue {
@@ -52,6 +53,7 @@ export async function getDashboardStats(
 
   const pendingAppointments = appointments.filter((apt) => apt.status === 'pending').length;
   const approvedAppointments = appointments.filter((apt) => apt.status === 'approved').length;
+  const completedAppointments = appointments.filter((apt) => apt.status === 'completed').length;
   const cancelledAppointments = appointments.filter((apt) => apt.status === 'cancelled').length;
 
   const totalRevenue = appointments
@@ -65,7 +67,8 @@ export async function getDashboardStats(
     totalRevenue,
     pendingAppointments,
     approvedAppointments,
-    completedAppointments: cancelledAppointments,
+    completedAppointments,
+    cancelledAppointments,
   };
 }
 

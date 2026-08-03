@@ -212,11 +212,11 @@ export function OwnerDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
-                ⏳ Pending Appointments
+                ⏳ Pending Appointments ({appointments.filter((apt) => apt.status === 'pending').length})
               </h3>
               <div className="space-y-3">
                 {appointments
-                  .filter((apt) => apt.dateTime >= Date.now() && apt.status === 'pending')
+                  .filter((apt) => apt.status === 'pending')
                   .sort((a, b) => a.dateTime - b.dateTime)
                   .slice(0, 5)
                   .map((apt) => {
@@ -247,11 +247,11 @@ export function OwnerDashboard() {
 
             <Card className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
-                ✅ Approved Appointments
+                ✅ Approved Appointments ({appointments.filter((apt) => apt.status === 'approved').length})
               </h3>
               <div className="space-y-3">
                 {appointments
-                  .filter((apt) => apt.dateTime >= Date.now() && apt.status === 'approved')
+                  .filter((apt) => apt.status === 'approved')
                   .sort((a, b) => a.dateTime - b.dateTime)
                   .slice(0, 5)
                   .map((apt) => {

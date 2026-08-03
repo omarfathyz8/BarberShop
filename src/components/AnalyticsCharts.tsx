@@ -156,14 +156,14 @@ export function AnalyticsCharts({ appointments, ownerId }: AnalyticsChartsProps)
         <Card className="p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Appointment Status Distribution</h3>
           {appointmentsByStatus.some((s) => s.value > 0) ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
               <PieChart>
                 <Pie
                   data={appointmentsByStatus}
                   cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
+                  cy="45%"
+                  labelLine={true}
+                  label={({ name, value }) => value > 0 ? `${name}: ${value}` : null}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -172,7 +172,10 @@ export function AnalyticsCharts({ appointments, ownerId }: AnalyticsChartsProps)
                     <Cell key={`cell-${index}`} fill={item.color || COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value) => `${value} appointments`} />
+                <Legend
+                  wrapperStyle={{ paddingTop: '20px' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : (

@@ -10,38 +10,38 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
     {
       label: 'Total Workers',
       value: stats.totalWorkers,
-      icon: '👥',
-      color: 'bg-blue-50 text-blue-600',
+      icon: '✂️',
+      color: 'text-blue-500',
     },
     {
       label: 'Total Customers',
       value: stats.totalCustomers,
-      icon: '👨',
-      color: 'bg-green-50 text-green-600',
+      icon: '👦🏻',
+      color: 'text-orange-500',
     },
     {
       label: 'Total Appointments',
       value: stats.totalAppointments,
       icon: '📅',
-      color: 'bg-purple-50 text-purple-600',
+      color: 'text-purple-500',
     },
     {
       label: 'Total Revenue',
       value: `${stats.totalRevenue.toFixed(2)} LE`,
       icon: '💰',
-      color: 'bg-yellow-50 text-yellow-600',
+      color: 'bg-yellow-100 text-yellow-600',
     },
     {
-      label: 'Pending Appointments',
-      value: stats.pendingAppointments,
-      icon: '⏳',
-      color: 'bg-orange-50 text-orange-600',
+      label: 'Completed Appointments',
+      value: stats.completedAppointments,
+      icon: '🏆',
+      color: 'text-green-500',
     },
     {
-      label: 'Approved Appointments',
-      value: stats.approvedAppointments,
-      icon: '✅',
-      color: 'bg-green-50 text-green-600',
+      label: 'Cancelled Appointments',
+      value: stats.cancelledAppointments,
+      icon: '❌',
+      color: 'text-red-500',
     },
   ];
 
@@ -52,7 +52,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium opacity-75">{stat.label}</p>
-              <p className="text-3xl font-bold mt-2">{stat.value}</p>
+              <p className="text-3xl font-bold mt-2">{stat.value ?? 0}</p>
             </div>
             <div className="text-4xl">{stat.icon}</div>
           </div>
