@@ -115,9 +115,12 @@ export function WorkerManagement({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {workers.map((worker) => {
-          const workerAppointments = appointments?.filter(
+          const workerAllAppointments = appointments?.filter(
             (apt) => apt.workerId === worker.firebaseId && apt.status !== 'cancelled'
           ) || [];
+          const workerCompletedAppointments = workerAllAppointments.filter(
+            (apt) => apt.status === 'completed'
+          );
           const workerServices = services?.get(worker.firebaseId) || [];
 
           return (
@@ -125,45 +128,50 @@ export function WorkerManagement({
               <div className="space-y-4">
                 <div>
                   <h3 className="font-bold text-lg text-gray-900">{worker.name}</h3>
-                  <a
-                    href={`tel:${worker.phone}`}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                  >
-                    {worker.phone}
-                  </a>
-                  <a
-                    href={`mailto:${worker.email}`}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer block"
-                  >
-                    {worker.email}
-                  </a>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <a
+                      href={`tel:${worker.phone}`}
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      {worker.phone}
+                    </a>
+                    <span className="text-gray-400">•</span>
+                    <a
+                      href={`mailto:${worker.email}`}
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      {worker.email}
+                    </a>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-700">{worker.bio}</p>
 
                 <div className="grid grid-cols-2 gap-3 py-3 border-y border-gray-200">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{workerAppointments.length}</p>
-                    <p className="text-xs text-gray-600">Appointments</p>
+                    <p className="text-xs text-gray-600">All Appointments</p>
+                    <p className="text-2xl font-bold text-blue-600">{workerAllAppointments.length}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">{workerServices.length}</p>
-                    <p className="text-xs text-gray-600">Services</p>
+                    <p className="text-xs text-gray-600">Completed Appointments</p>
+                    <p className="text-2xl font-bold text-green-600">{workerCompletedAppointments.length}</p>
                   </div>
                 </div>
 
                 {workerServices.length > 0 && (
                   <div className="bg-gray-50 rounded p-3">
-                    <p className="text-xs font-semibold text-gray-700 mb-2">Services:</p>
-                    <div className="space-y-1">
-                      {workerServices.slice(0, 3).map((service) => (
-                        <p key={service.firebaseId} className="text-xs text-gray-600">
-                          • {service.name}
-                        </p>
+                    <p className="text-xs font-semibold text-gray-700 mb-2">{workerServices.length} Service{workerServices.length > 1 ? 's' : ''}:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {workerServices.slice(0, 3).map((service, index) => (
+                        <div key={service.firebaseId} className="flex items-center gap-1">
+                          <span className="text-xs text-gray-600">{service.name}</span>
+                          {index < Math.min(2, workerServices.length - 1) && (
+                            <span className="text-gray-400">•</span>
+                          )}
+                        </div>
                       ))}
                       {workerServices.length > 3 && (
-                        <p className="text-xs text-gray-500 font-medium">
+                        <span className="text-xs text-gray-500 font-medium">
                           +{workerServices.length - 3} more
-                        </p>
+                        </span>
                       )}
                     </div>
                   </div>
@@ -323,7 +331,7 @@ export function WorkerManagement({
                 📋 Worker Login Instructions:
               </p>
               <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
-                <li>Go to login page at <a href="https://barber-shop8.vercel.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">https://barber-shop8.vercel.app</a></li>
+                <li>Go to login page at <a href="https://barber-shop8.vercel.app/login" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">https://barber-shop8.vercel.app/login</a></li>
                 <li>Enter the email address and the temporary password above</li>
                 <li>Click "Sign In"</li>
                 <li>Change password on first login</li>

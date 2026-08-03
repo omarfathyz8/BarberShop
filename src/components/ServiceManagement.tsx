@@ -100,20 +100,20 @@ export function ServiceManagement({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {services.get(worker.firebaseId)?.map((service) => (
                 <Card key={service.firebaseId} className="p-4">
-                  <div className="space-y-3">
-                    <div>
-                      <h4 className="font-bold text-gray-900">{service.name}</h4>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-2 mb-2">
+                        <h4 className="font-bold text-gray-900">{service.name}</h4>
+                        <span className="text-sm text-gray-600">
+                          • ⏱️ {service.duration} min •
+                        </span>
+                        <span className="text-sm font-semibold text-green-600">
+                          {service.price.toFixed(2)} LE
+                        </span>
+                      </div>
                       <p className="text-sm text-gray-600">
                         {service.description}
                       </p>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">
-                        ⏱️ {service.duration} min
-                      </span>
-                      <span className="font-semibold text-green-600">
-                        {service.price.toFixed(2)} LE
-                      </span>
                     </div>
                     <div className="flex space-x-2">
                       <Button
