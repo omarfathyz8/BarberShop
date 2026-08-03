@@ -66,25 +66,28 @@ export function CustomerList({ ownerId }: CustomerListProps) {
         <>
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="text-center bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-sm font-semibold text-gray-900">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-sm font-semibold text-gray-900">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-sm font-semibold text-gray-900">
                     Phone
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-sm font-semibold text-gray-900">
                     Appointments
+                  </th>
+                  <th className="px-6 py-3 text-sm font-semibold text-gray-900">
+                    Completed Appointments
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filtered.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50">
+                  <tr key={customer.id} className=" text-center hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {customer.name}
                     </td>
@@ -106,6 +109,10 @@ export function CustomerList({ ownerId }: CustomerListProps) {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {customer.appointmentsCount || 0}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {/* {customer.completedAppointmentsCount || 0} */}
+                      0
                     </td>
                   </tr>
                 ))}
