@@ -111,8 +111,7 @@ export function CustomerList({ ownerId }: CustomerListProps) {
                       {customer.appointmentsCount || 0}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {/* {customer.completedAppointmentsCount || 0} */}
-                      0
+                      {customer.completedAppointmentsCount || 0}
                     </td>
                   </tr>
                 ))}
@@ -127,7 +126,10 @@ export function CustomerList({ ownerId }: CustomerListProps) {
                   <div className="flex justify-between items-start">
                     <h3 className="font-semibold text-gray-900">{customer.name}</h3>
                     <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                      {customer.appointmentsCount || 0} apt
+                      {customer.appointmentsCount || 0} appointments
+                    </span>
+                    <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
+                      {customer.completedAppointmentsCount || 0} completed
                     </span>
                   </div>
                   <div className="space-y-1 text-sm">

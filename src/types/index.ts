@@ -47,6 +47,7 @@ export interface Service {
 
 export interface Customer extends User {
   appointmentsCount: number;
+  completedAppointmentsCount: number;
 }
 
 export interface Appointment {

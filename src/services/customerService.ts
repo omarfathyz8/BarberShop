@@ -19,12 +19,16 @@ export async function getCustomers(ownerId?: string): Promise<Customer[]> {
   for (const [userId, userData] of Object.entries(data)) {
     const user = userData as Record<string, any>;
     if (user.role === 'customer') {
-      // Get appointment count for this customer if ownerId is provided
+      // Get appointment counts for this customer if ownerId is provided
       let appointmentsCount = 0;
+      let completedAppointmentsCount = 0;
       if (ownerId) {
         try {
           const appointments = await getCustomerAppointments(ownerId, userId);
           appointmentsCount = appointments.length;
+          completedAppointmentsCount = appointments.filter(
+            (apt: any) => apt.status === 'completed'
+          ).length;
         } catch (error) {
           console.error('Error fetching appointment count:', error);
         }
@@ -34,6 +38,7 @@ export async function getCustomers(ownerId?: string): Promise<Customer[]> {
         ...user,
         id: userId,
         appointmentsCount,
+        completedAppointmentsCount,
       } as Customer);
     }
   }
@@ -71,9 +76,13 @@ export async function getCustomerWithAppointmentCount(
   }
 
   const appointments = await getCustomerAppointments(ownerId, userId);
+  const completedAppointmentsCount = appointments.filter(
+    (apt: any) => apt.status === 'completed'
+  ).length;
 
   return {
     ...customer,
     appointmentsCount: appointments.length,
+    completedAppointmentsCount,
   };
 }
