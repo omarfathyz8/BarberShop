@@ -194,13 +194,13 @@ export function AnalyticsCharts({ appointments, ownerId }: AnalyticsChartsProps)
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip
-                  formatter={(value) => [value, 'Appointments']}
+                  formatter={(value) => [value, 'Completed Appointments']}
                 />
                 <Legend />
                 <Bar
                   dataKey="appointmentCount"
                   fill="#8b5cf6"
-                  name="Appointments"
+                  name="Completed Appointments"
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -224,7 +224,7 @@ export function AnalyticsCharts({ appointments, ownerId }: AnalyticsChartsProps)
               <BarChart data={workerPerformanceData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="workerName" />
-                <YAxis yAxisId="left" label={{ value: 'Appointments', angle: -90, position: 'center', dx: -20 }} />
+                <YAxis yAxisId="left" label={{ value: 'Completed Appointments', angle: -90, position: 'center', dx: -20 }} />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
@@ -232,12 +232,12 @@ export function AnalyticsCharts({ appointments, ownerId }: AnalyticsChartsProps)
                 />
                 <Tooltip
                   formatter={(value, name) => {
-                    if (name === 'appointmentCount') return [value, 'Appointments'];
+                    if (name === 'completedAppointments') return [value, 'Completed Appointments'];
                     return [`${typeof value === 'number' ? value.toFixed(2) : value} LE`, 'Revenue'];
                   }}
                 />
                 <Legend />
-                <Bar yAxisId="left" dataKey="appointmentCount" fill="#3b82f6" name="Appointments" />
+                <Bar yAxisId="left" dataKey="completedAppointments" fill="#3b82f6" name="Completed Appointments" />
                 <Bar yAxisId="right" dataKey="revenue" fill="#10b981" name="Revenue (LE)" />
               </BarChart>
             </ResponsiveContainer>
