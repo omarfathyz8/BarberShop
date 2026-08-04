@@ -30,7 +30,7 @@ export function WorkerStats({ appointments }: WorkerStatsProps) {
       label: "Today's Appointments",
       value: todayAppointments.length,
       icon: '📅',
-      color: 'bg-blue-50 text-blue-600',
+      color: 'text-blue-500',
     },
     {
       label: 'Upcoming (7 days)',
@@ -38,25 +38,25 @@ export function WorkerStats({ appointments }: WorkerStatsProps) {
         (apt) => apt.dateTime < now + 7 * 24 * 60 * 60 * 1000
       ).length,
       icon: '📆',
-      color: 'bg-purple-50 text-purple-600',
+      color: 'text-purple-500',
     },
     {
       label: 'Pending Approval',
       value: pendingAppointments.length,
       icon: '⏳',
-      color: 'bg-yellow-50 text-yellow-600',
+      color: 'text-yellow-500',
     },
     {
       label: 'Approved',
       value: approvedAppointments.length,
       icon: '✅',
-      color: 'bg-green-50 text-green-600',
+      color: 'text-green-500',
     },
     {
       label: 'Total Earnings',
       value: `${totalEarnings.toFixed(2)} LE`,
       icon: '💰',
-      color: 'bg-green-50 text-green-600',
+      color: 'bg-yellow-100 text-yellow-600',
     },
   ];
 

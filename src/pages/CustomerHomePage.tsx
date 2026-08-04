@@ -15,7 +15,7 @@ import type { Worker, Service } from '../types';
 
 export function CustomerHomePage() {
   const navigate = useNavigate();
-  useAuth(); // Check authentication
+  useAuth();
   const { showToast } = useToast();
 
   const [workers, setWorkers] = useState<(Worker & { firebaseId: string })[]>([]);
@@ -163,7 +163,21 @@ export function CustomerHomePage() {
                 key={worker.firebaseId}
                 className="hover:shadow-md transition-shadow flex flex-col p-5"
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{worker.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {worker.name}
+                  {worker.phone && (
+                    <>
+                      {' • '}
+                      <a
+                        href={`tel:${worker.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-blue-600 hover:underline font-medium"
+                      >
+                        {worker.phone}
+                      </a>
+                    </>
+                  )}
+                </h3>
                 <p className="text-sm text-gray-600 mb-3">{worker.bio}</p>
 
                 {allServices.get(worker.firebaseId) && allServices.get(worker.firebaseId)!.length > 0 && (

@@ -29,21 +29,19 @@ export function WorkerDashboard() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [ownerId, setOwnerId] = useState<string>(''); // NEW: track ownerId in state so we can pass it down
 
   // Get current user's UID and worker ID
   const currentUser = auth.currentUser;
-  console.log('Current user:', currentUser?.email);
   if (!currentUser) {
     console.log('No current user, redirecting to login');
     navigate('/login');
     return null;
   }
-  console.log('Current user authenticated:', currentUser.email);
 
   useEffect(() => {
     const loadWorkerData = async () => {
       try {
-        console.log('=== WorkerDashboard loadWorkerData starting ===');
         setIsLoading(true);
 
         // Check if this is first login (temp password was used)
@@ -64,7 +62,8 @@ export function WorkerDashboard() {
         }
 
         let workerId: string;
-        let ownerId: string = cachedOwnerId;
+        const resolvedOwnerId: string = cachedOwnerId;
+        setOwnerId(resolvedOwnerId); // NEW: store ownerId in state
 
         // Get workerId from localStorage
         if (!cachedWorkerData) {
@@ -77,9 +76,6 @@ export function WorkerDashboard() {
         try {
           const parsed = JSON.parse(cachedWorkerData);
           workerId = parsed.workerId;
-          console.log('Parsed workerData from localStorage:', parsed);
-          console.log('Loaded worker from localStorage:', { workerId, ownerId });
-          console.log('About to fetch worker with:', { ownerId, workerId });
         } catch (e) {
           console.error('Failed to parse worker data from localStorage:', e);
           showToast('Invalid worker data. Please login again.', 'error');
@@ -88,22 +84,19 @@ export function WorkerDashboard() {
         }
 
         // Fetch worker details
-        console.log('Fetching worker with ownerId:', ownerId, 'workerId:', workerId);
-        const workerData = await workerService.getWorker(ownerId, workerId);
-        console.log('Fetched worker data:', workerData);
+        const workerData = await workerService.getWorker(resolvedOwnerId, workerId);
         if (workerData) {
-          console.log('Setting worker:', { name: workerData.name, workerId: workerData.firebaseId });
           setWorker(workerData);
         } else {
-          console.error('No worker data returned for:', { ownerId, workerId });
+          console.error('No worker data returned for:', { ownerId: resolvedOwnerId, workerId });
         }
 
         // Fetch worker's appointments
-        const workerAppointments = await appointmentService.getWorkerAppointments(ownerId, workerId);
+        const workerAppointments = await appointmentService.getWorkerAppointments(resolvedOwnerId, workerId);
         setAppointments(workerAppointments);
 
         // Fetch worker's services
-        const workerServices = await serviceService.getWorkerServices(ownerId, workerId);
+        const workerServices = await serviceService.getWorkerServices(resolvedOwnerId, workerId);
         setServices(workerServices);
       } catch (error) {
         console.error('Error loading worker data:', error);
@@ -254,6 +247,7 @@ export function WorkerDashboard() {
               onApprove={handleApprove}
               onComplete={handleComplete}
               isLoading={false}
+              ownerId={ownerId}
             />
           </div>
         )}
