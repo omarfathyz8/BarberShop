@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../contexts/ToastContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { RatingDialog } from '../components/RatingDialog';
 import { formatDateTime } from '../lib/utils';
 import { branding } from '../config/branding';
 import * as appointmentService from '../services/appointmentService';
@@ -21,47 +22,89 @@ export function CustomerAppointmentsPage() {
   const [appointments, setAppointments] = useState<(Appointment & { firebaseId: string })[]>([]);
   const [workers, setWorkers] = useState<Map<string, Worker & { firebaseId: string }>>(new Map());
   const [tab, setTab] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming');
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [selectedWorkerForRating, setSelectedWorkerForRating] = useState<(Worker & { firebaseId: string }) | null>(null);
+  const [selectedAppointmentForRating, setSelectedAppointmentForRating] = useState<string | null>(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
+
+  const refreshAppointments = async () => {
+    try {
+      let storedOwnerId: string | null = localStorage.getItem('currentShopOwnerId');
+
+      if (!storedOwnerId) {
+        try {
+          const shopConfigSnapshot = await get(ref(db, 'shopConfig/currentOwnerId'));
+          if (shopConfigSnapshot.exists()) {
+            storedOwnerId = shopConfigSnapshot.val();
+            if (storedOwnerId) {
+              localStorage.setItem('currentShopOwnerId', storedOwnerId);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching owner ID from Firebase:', error);
+        }
+      }
+
+      if (!storedOwnerId || !user) return;
+
+      const allAppointments = await appointmentService.getAppointments(storedOwnerId);
+      const customerAppointments = allAppointments.filter((apt) => apt.customerId === user.id);
+      setAppointments(customerAppointments);
+
+      const workersData = await workerService.getWorkers(storedOwnerId);
+      console.log('Workers loaded:', workersData);
+      const workersMap = new Map(
+        workersData.map((w) => [
+          w.firebaseId,
+          {
+            ...w,
+            ratings: Array.isArray(w.ratings) ? w.ratings : [],
+          },
+        ])
+      );
+
+      // Also load worker data for appointments that reference workers not in the current list
+      const missingWorkerIds = new Set<string>();
+      customerAppointments.forEach((apt) => {
+        if (!workersMap.has(apt.workerId)) {
+          missingWorkerIds.add(apt.workerId);
+        }
+      });
+
+      if (missingWorkerIds.size > 0) {
+        console.log('Loading missing workers:', Array.from(missingWorkerIds));
+        for (const workerId of missingWorkerIds) {
+          try {
+            const workerRef = ref(db, `workers/${storedOwnerId}/${workerId}`);
+            const workerSnapshot = await get(workerRef);
+            console.log(`Fetching worker ${workerId}, exists:`, workerSnapshot.exists());
+            if (workerSnapshot.exists()) {
+              const workerData = workerSnapshot.val();
+              console.log(`Worker ${workerId} data:`, workerData);
+              workersMap.set(workerId, {
+                firebaseId: workerId,
+                ...workerData,
+                ratings: Array.isArray(workerData.ratings) ? workerData.ratings : [],
+              });
+            }
+          } catch (error) {
+            console.error(`Error loading worker ${workerId}:`, error);
+          }
+        }
+      }
+
+      console.log('Workers map created:', workersMap);
+      setWorkers(workersMap);
+    } catch (error) {
+      console.error('Error refreshing appointments:', error);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        let storedOwnerId: string | null = localStorage.getItem('currentShopOwnerId');
-
-        // If not in localStorage, fetch from Firebase (for customers on new devices)
-        if (!storedOwnerId) {
-          try {
-            const shopConfigSnapshot = await get(ref(db, 'shopConfig/currentOwnerId'));
-            if (shopConfigSnapshot.exists()) {
-              storedOwnerId = shopConfigSnapshot.val();
-              if (storedOwnerId) {
-                localStorage.setItem('currentShopOwnerId', storedOwnerId);
-              }
-            }
-          } catch (error) {
-            console.error('Error fetching owner ID from Firebase:', error);
-          }
-        }
-
-        if (!storedOwnerId) {
-          showToast('Shop not configured', 'error');
-          navigate('/customer/home');
-          return;
-        }
-
-        if (!user) {
-          return;
-        }
-
-        // Load all appointments and filter by customer
-        const allAppointments = await appointmentService.getAppointments(storedOwnerId);
-        const customerAppointments = allAppointments.filter((apt) => apt.customerId === user.id);
-        setAppointments(customerAppointments);
-
-        // Load workers
-        const workersData = await workerService.getWorkers(storedOwnerId);
-        const workersMap = new Map(workersData.map((w) => [w.firebaseId, w]));
-        setWorkers(workersMap);
+        await refreshAppointments();
       } catch (error) {
         console.error('Error loading appointments:', error);
         showToast('Failed to load appointments', 'error');
@@ -71,15 +114,23 @@ export function CustomerAppointmentsPage() {
     };
 
     loadData();
+
+    // Refresh when page regains focus
+    const handleFocus = () => {
+      refreshAppointments();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [navigate, showToast, user]);
 
   const now = Date.now();
   const categorizedAppointments = {
     upcoming: appointments
-      .filter((apt) => apt.dateTime >= now && apt.status !== 'cancelled')
+      .filter((apt) => apt.status === 'pending' || apt.status === 'approved' || (apt.dateTime >= now && apt.status !== 'cancelled'))
       .sort((a, b) => a.dateTime - b.dateTime),
     past: appointments
-      .filter((apt) => apt.dateTime < now && apt.status !== 'cancelled')
+      .filter((apt) => apt.status === 'completed' || (apt.dateTime < now && apt.status !== 'cancelled'))
       .sort((a, b) => b.dateTime - a.dateTime),
     cancelled: appointments
       .filter((apt) => apt.status === 'cancelled')
@@ -130,6 +181,75 @@ export function CustomerAppointmentsPage() {
 
   const handleRescheduleAppointment = (appointmentId: string, workerId: string) => {
     navigate('/book', { state: { selectedWorkerId: workerId, rescheduleAppointmentId: appointmentId } });
+  };
+
+  const handleOpenRatingDialog = (worker: Worker & { firebaseId: string }, appointmentId: string) => {
+    setSelectedWorkerForRating(worker);
+    setSelectedAppointmentForRating(appointmentId);
+    setRatingOpen(true);
+  };
+
+  const handleSubmitRating = async (rating: number, notes?: string) => {
+    if (!selectedWorkerForRating || !user || !selectedAppointmentForRating) return;
+
+    setRatingLoading(true);
+
+    try {
+      const ownerId = localStorage.getItem('currentShopOwnerId');
+      if (!ownerId) {
+        showToast('Shop not configured', 'error');
+        setRatingLoading(false);
+        return;
+      }
+
+      // Submit rating
+      await workerService.addRating(
+        ownerId,
+        selectedWorkerForRating.firebaseId,
+        rating,
+        user.id,
+        user.name,
+        user.phone,
+        selectedAppointmentForRating!,
+        notes
+      );
+
+      showToast('Rating submitted successfully', 'success');
+
+      // Close dialog and reset state immediately
+      setRatingOpen(false);
+      setSelectedWorkerForRating(null);
+      setRatingLoading(false);
+
+      // Reload workers to get updated ratings in background
+      try {
+        const workersData = await workerService.getWorkers(ownerId);
+        if (workersData && Array.isArray(workersData)) {
+          const workersMap = new Map(
+            workersData.map((w) => [
+              w.firebaseId,
+              {
+                ...w,
+                ratings: Array.isArray(w.ratings) ? w.ratings : [],
+              },
+            ])
+          );
+          setWorkers(workersMap);
+        }
+      } catch (reloadError) {
+        console.error('Error reloading workers after rating:', reloadError);
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      showToast('Failed to submit rating', 'error');
+      setRatingLoading(false);
+    }
+  };
+
+  const hasRated = (workerId: string, appointmentId: string): boolean => {
+    const worker = workers.get(workerId);
+    if (!worker || !worker.ratings) return false;
+    return worker.ratings.some((r) => r.appointmentId === appointmentId);
   };
 
   return (
@@ -231,12 +351,31 @@ export function CustomerAppointmentsPage() {
                       Reschedule
                     </Button>
                   )}
+                  {tab === 'past' && apt.status === 'completed' && !hasRated(apt.workerId, apt.firebaseId) && workers.get(apt.workerId) && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleOpenRatingDialog(workers.get(apt.workerId)!, apt.firebaseId)}
+                    >
+                      Rate Barber
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
           </div>
         )}
       </main>
+
+      <RatingDialog
+        open={ratingOpen}
+        onOpenChange={setRatingOpen}
+        worker={selectedWorkerForRating}
+        customerName={user?.name || 'Customer'}
+        onSubmit={handleSubmitRating}
+        isLoading={ratingLoading}
+        appointmentId={selectedAppointmentForRating || undefined}
+      />
     </div>
   );
 }

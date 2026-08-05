@@ -1,5 +1,6 @@
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { WorkerRatingBadge } from './WorkerRatingBadge';
 import type { Worker } from '../types';
 
 interface BookingStep1BarberSelectionProps {
@@ -37,7 +38,9 @@ export function BookingStep1BarberSelection({
           >
             <div>
               <h3 className="font-semibold text-gray-900">{worker.name}</h3>
-              <p className="text-sm text-gray-600 mt-1">{worker.bio}</p>
+              <div className="mt-2">
+                <WorkerRatingBadge ratings={worker.ratings || []} />
+              </div>
             </div>
           </Card>
         ))}

@@ -8,6 +8,7 @@ import { AppointmentsList } from '../components/AppointmentsList';
 import { AppointmentDetail } from '../components/AppointmentDetail';
 import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 import { WorkerScheduleDialog } from '../components/WorkerScheduleDialog';
+import { WorkerRatingsDisplay } from '../components/WorkerRatingsDisplay';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import * as appointmentService from '../services/appointmentService';
@@ -16,7 +17,6 @@ import * as workerService from '../services/workerService';
 import type { Appointment, Service, Worker, WorkingHours } from '../types';
 
 export function WorkerDashboard() {
-  console.log('WorkerDashboard component mounted');
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -34,7 +34,6 @@ export function WorkerDashboard() {
   // Get current user's UID and worker ID
   const currentUser = auth.currentUser;
   if (!currentUser) {
-    console.log('No current user, redirecting to login');
     navigate('/login');
     return null;
   }
@@ -102,7 +101,6 @@ export function WorkerDashboard() {
         console.error('Error loading worker data:', error);
         showToast('Failed to load worker data', 'error');
       } finally {
-        console.log('=== WorkerDashboard loading complete ===');
         setIsLoading(false);
       }
     };
@@ -305,6 +303,24 @@ export function WorkerDashboard() {
                 </div>
               ) : (
                 <p className="text-gray-500">Unable to load schedule information</p>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {currentTab === 'ratings' && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">My Rating</h2>
+            <Card className="p-6">
+              {worker && worker.ratings && worker.ratings.length > 0 ? (
+                <WorkerRatingsDisplay
+                  ratings={worker.ratings}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 text-lg">No rating yet</p>
+                  <p className="text-gray-500 mt-2">Your rating will appear here once you receive feedback from customers.</p>
+                </div>
               )}
             </Card>
           </div>

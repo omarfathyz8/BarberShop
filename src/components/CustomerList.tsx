@@ -19,9 +19,7 @@ export function CustomerList({ ownerId }: CustomerListProps) {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      console.log('Loading customers for owner:', ownerId);
       const data = await getCustomers(ownerId);
-      console.log('Customers loaded:', data);
       setCustomers(data);
     } catch (error) {
       console.error('Error loading customers:', error);

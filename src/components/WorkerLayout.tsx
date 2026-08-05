@@ -28,6 +28,7 @@ export function WorkerLayout({ children, currentTab, onTabChange, workerName = '
   const tabs = [
     { id: 'appointments', label: 'My Appointments', icon: '📅' },
     { id: 'schedule', label: 'My Schedule', icon: '⏰' },
+    { id: 'ratings', label: 'My Rating', icon: '⭐' },
   ];
 
   return (

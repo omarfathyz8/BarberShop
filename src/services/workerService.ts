@@ -1,6 +1,6 @@
 import { ref, push, get, update, remove, set } from 'firebase/database';
 import { db } from '../config/firebase';
-import type { Worker, WorkingHours } from '../types';
+import type { Worker, WorkingHours, SimpleRating } from '../types';
 
 const WORKERS_PATH = 'workers';
 const TEMP_CREDENTIALS_PATH = 'temporaryCredentials';
@@ -40,17 +40,15 @@ export async function createWorker(
   const newWorkerRef = push(workersRef);
   const workerId = newWorkerRef.key!;
 
-  console.log('Creating worker:', { email: workerData.email, workerId, ownerId });
-
   // Store worker data in workers collection only
   await set(newWorkerRef, {
     ...workerData,
+    ratings: [],
     createdAt: Date.now(),
   });
 
   // Store temporary credentials for first login (encode email for database key)
   const encodedEmail = encodeEmail(workerData.email);
-  console.log('Encoding email for credentials:', { email: workerData.email, encodedEmail, workerId });
 
   const credRef = ref(db, `${TEMP_CREDENTIALS_PATH}/${encodedEmail}`);
   await set(credRef, {
@@ -74,10 +72,21 @@ export async function getWorkers(ownerId: string): Promise<(Worker & { firebaseI
   }
 
   const data = snapshot.val();
-  return Object.entries(data).map(([firebaseId, worker]: [string, any]) => ({
-    firebaseId,
-    ...worker,
-  }));
+  return Object.entries(data).map(([firebaseId, worker]: [string, any]) => {
+    // Convert ratings object to array
+    let ratings: any[] = [];
+    if (worker.ratings && typeof worker.ratings === 'object' && !Array.isArray(worker.ratings)) {
+      ratings = Object.values(worker.ratings);
+    } else if (Array.isArray(worker.ratings)) {
+      ratings = worker.ratings;
+    }
+
+    return {
+      firebaseId,
+      ...worker,
+      ratings,
+    };
+  });
 }
 
 export async function getWorker(
@@ -91,9 +100,18 @@ export async function getWorker(
     return null;
   }
 
+  const data = snapshot.val();
+
+  // Convert ratings object to array
+  let ratings: any[] = [];
+  if (data.ratings && typeof data.ratings === 'object') {
+    ratings = Object.values(data.ratings);
+  }
+
   return {
     firebaseId: workerId,
-    ...snapshot.val(),
+    ...data,
+    ratings,
   };
 }
 
@@ -126,5 +144,51 @@ export async function updateWorkerWorkingHours(
     workingHours,
     updatedAt: Date.now(),
   });
+}
+
+export async function addRating(
+  ownerId: string,
+  workerId: string,
+  score: number,
+  customerId: string,
+  customerName: string,
+  customerPhone: string,
+  appointmentId: string,
+  notes?: string
+): Promise<string> {
+  const ratingRef = ref(db, `${WORKERS_PATH}/${ownerId}/${workerId}/ratings`);
+  const newRatingRef = push(ratingRef);
+  const ratingId = newRatingRef.key!;
+
+  const ratingData: any = {
+    score,
+    customerId,
+    customerName,
+    customerPhone,
+    appointmentId,
+  };
+
+  if (notes) {
+    ratingData.notes = notes;
+  }
+
+  await set(newRatingRef, ratingData);
+
+  return ratingId;
+}
+
+export async function getRatings(
+  ownerId: string,
+  workerId: string
+): Promise<SimpleRating[]> {
+  const ratingRef = ref(db, `${WORKERS_PATH}/${ownerId}/${workerId}/ratings`);
+  const snapshot = await get(ratingRef);
+
+  if (!snapshot.exists()) {
+    return [];
+  }
+
+  const data = snapshot.val();
+  return Object.values(data);
 }
 

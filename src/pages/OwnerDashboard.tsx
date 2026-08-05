@@ -8,6 +8,7 @@ import { ServiceManagement } from '../components/ServiceManagement';
 import { AppointmentManagement } from '../components/AppointmentManagement';
 import { CustomerList } from '../components/CustomerList';
 import { AnalyticsCharts } from '../components/AnalyticsCharts';
+import { AllRatingsView } from '../components/AllRatingsView';
 import { Card } from '../components/ui/Card';
 import { formatDateTime } from '../lib/utils';
 import {
@@ -325,6 +326,18 @@ export function OwnerDashboard() {
             <p className="text-gray-600 mt-2">Monitor your business performance with detailed analytics</p>
           </div>
           <AnalyticsCharts appointments={appointments} ownerId={ownerId} />
+        </div>
+      )}
+
+      {currentTab === 'ratings' && (
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">All Ratings</h1>
+            <p className="text-gray-600 mt-2">View all customer ratings for your workers</p>
+          </div>
+          <Card className="p-6">
+            <AllRatingsView workers={workers} ownerId={ownerId} />
+          </Card>
         </div>
       )}
     </DashboardLayout>

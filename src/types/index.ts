@@ -15,8 +15,26 @@ export interface WorkerUser extends User {
   ownerId: string;
 }
 
+export interface Rating {
+  id: string;
+  customerId: string;
+  customerName: string;
+  score: number; // 1-5
+  review: string;
+  createdAt: number;
+}
+
+export interface SimpleRating {
+  score: number;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  appointmentId: string;
+  notes?: string;
+}
+
 export interface Worker extends User {
-  bio: string;
+  ratings: SimpleRating[];
   workingHours: WorkingHours;
 }
 

@@ -7,6 +7,7 @@ import { useToast } from '../contexts/ToastContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { WorkerRatingBadge } from '../components/WorkerRatingBadge';
 import { branding } from '../config/branding';
 import { logoutUser } from '../lib/auth';
 import * as workerService from '../services/workerService';
@@ -53,12 +54,21 @@ export function CustomerHomePage() {
         }
 
         if (ownerIdToUse) {
-          const workersData = await workerService.getWorkers(ownerIdToUse);
-          setWorkers(workersData);
-          setOwnerId(ownerIdToUse);
+          try {
+            const workersData = await workerService.getWorkers(ownerIdToUse);
+            const workersWithRatings = workersData.map((w) => ({
+              ...w,
+              ratings: w.ratings || [],
+            }));
+            setWorkers(workersWithRatings);
+            setOwnerId(ownerIdToUse);
 
-          const servicesData = await serviceService.getAllWorkerServices(ownerIdToUse);
-          setAllServices(servicesData);
+            const servicesData = await serviceService.getAllWorkerServices(ownerIdToUse);
+            setAllServices(servicesData);
+          } catch (loadError) {
+            console.error('Error loading workers or services:', loadError);
+            showToast('Failed to load barbers or services', 'error');
+          }
         } else {
           showToast('Shop not configured. Please have the owner configure the shop first.', 'error');
         }
@@ -81,8 +91,7 @@ export function CustomerHomePage() {
 
   const filteredWorkers = workers.filter(
     (worker) =>
-      worker.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      worker.bio.toLowerCase().includes(searchTerm.toLowerCase())
+      worker.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -178,7 +187,9 @@ export function CustomerHomePage() {
                     </>
                   )}
                 </h3>
-                <p className="text-sm text-gray-600 mb-3">{worker.bio}</p>
+                <div className="mb-3">
+                  <WorkerRatingBadge ratings={worker.ratings || []} />
+                </div>
 
                 {allServices.get(worker.firebaseId) && allServices.get(worker.firebaseId)!.length > 0 && (
                   <div className="mb-4 pb-3 border-b">

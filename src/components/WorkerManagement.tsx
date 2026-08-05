@@ -4,6 +4,7 @@ import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Dialog } from './ui/Dialog';
+import { WorkerRatingBadge } from './WorkerRatingBadge';
 
 interface WorkerManagementProps {
   workers: (Worker & { firebaseId: string })[];
@@ -39,7 +40,6 @@ export function WorkerManagement({
     name: '',
     email: '',
     phone: '',
-    bio: '',
   });
   const [showCredentials, setShowCredentials] = useState(false);
   const [workerCredentials, setWorkerCredentials] = useState<{
@@ -54,11 +54,10 @@ export function WorkerManagement({
         name: worker.name,
         email: worker.email,
         phone: worker.phone,
-        bio: worker.bio,
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', bio: '' });
+      setFormData({ name: '', email: '', phone: '' });
     }
     setIsDialogOpen(true);
   };
@@ -69,13 +68,11 @@ export function WorkerManagement({
       if (editingId) {
         await onUpdateWorker(editingId, formData);
         setIsDialogOpen(false);
-        setFormData({ name: '', email: '', phone: '', bio: '' });
+        setFormData({ name: '', email: '', phone: '' });
       } else {
         // Generate temporary password for new worker
         const tempPassword = Math.random().toString(36).substring(2, 10) +
                             Math.random().toString(36).substring(2, 10);
-
-        console.log('Adding worker with email:', formData.email);
 
         await onAddWorker(
           {
@@ -86,8 +83,6 @@ export function WorkerManagement({
           tempPassword
         );
 
-        console.log('Worker added successfully, showing credentials');
-
         // Show credentials dialog with temp password
         setWorkerCredentials({
           email: formData.email,
@@ -97,7 +92,7 @@ export function WorkerManagement({
 
         // Close the add worker dialog
         setIsDialogOpen(false);
-        setFormData({ name: '', email: '', phone: '', bio: '' });
+        setFormData({ name: '', email: '', phone: '' });
       }
     } catch (error) {
       console.error('Error saving worker:', error);
@@ -128,6 +123,11 @@ export function WorkerManagement({
               <div className="space-y-4">
                 <div>
                   <h3 className="font-bold text-lg text-gray-900">{worker.name}</h3>
+                  {worker.ratings && worker.ratings.length > 0 && (
+                    <div className="mt-2 mb-2">
+                      <WorkerRatingBadge ratings={worker.ratings} />
+                    </div>
+                  )}
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <a
                       href={`tel:${worker.phone}`}
@@ -258,13 +258,6 @@ export function WorkerManagement({
               value={formData.phone}
               onChange={(e) =>
                 setFormData({ ...formData, phone: e.target.value })
-              }
-            />
-            <Input
-              label="Bio"
-              value={formData.bio}
-              onChange={(e) =>
-                setFormData({ ...formData, bio: e.target.value })
               }
             />
           </div>
