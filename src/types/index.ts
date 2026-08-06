@@ -1,4 +1,4 @@
-export type UserRole = 'owner' | 'worker' | 'customer';
+export type UserRole = 'owner' | 'admin' | 'cashier' | 'worker' | 'customer';
 
 export type AppointmentStatus = 'pending' | 'approved' | 'cancelled' | 'completed';
 
@@ -8,6 +8,8 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
+  ownerId?: string;
+  workerId?: string;
 }
 
 export interface WorkerUser extends User {

@@ -10,6 +10,7 @@ import { CustomerList } from '../components/CustomerList';
 import { AnalyticsCharts } from '../components/AnalyticsCharts';
 import { AllRatingsView } from '../components/AllRatingsView';
 import { AdminAttendance } from '../components/AdminAttendance';
+import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 import { Card } from '../components/ui/Card';
 import { formatDateTime } from '../lib/utils';
 import {
@@ -38,6 +39,9 @@ export function OwnerDashboard() {
   const { user } = useAuth();
   const { showToast } = useToast();
 
+  const isOwner = user?.role === 'owner';
+  const isCashier = user?.role === 'cashier';
+
   const [currentTab, setCurrentTab] = useState('overview');
   const [workers, setWorkers] = useState<(Worker & { firebaseId: string })[]>([]);
   const [appointments, setAppointments] = useState<(Appointment & { firebaseId: string })[]>([]);
@@ -47,8 +51,30 @@ export function OwnerDashboard() {
   const [customers, setCustomers] = useState<Map<string, any>>(new Map());
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
-  const ownerId = user?.id || '';
+  // For owners, use their own ID; for cashiers, use the shop owner's ID
+  const ownerId = isOwner ? (user?.id || '') : (user?.ownerId || '');
+
+  // Set default tab based on user role
+  useEffect(() => {
+    if (isCashier) {
+      setCurrentTab('attendance');
+    } else {
+      setCurrentTab('overview');
+    }
+  }, [isCashier]);
+
+  // Show password dialog on first login for cashiers
+  useEffect(() => {
+    if (isCashier) {
+      const isFirstLogin = localStorage.getItem('workerFirstLogin') !== 'false';
+      if (isFirstLogin) {
+        setShowPasswordDialog(true);
+        localStorage.setItem('workerFirstLogin', 'false');
+      }
+    }
+  }, [isCashier]);
 
   useEffect(() => {
     if (!ownerId) return;
@@ -58,29 +84,40 @@ export function OwnerDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [workersData, appointmentsData, servicesData, customersData] = await Promise.all([
+
+      // Load data that both owners and cashiers can access
+      const [workersData, appointmentsData, customersData] = await Promise.all([
         getWorkers(ownerId),
         getAppointments(ownerId),
-        getAllWorkerServices(ownerId),
         getCustomers(ownerId),
       ]);
 
       setWorkers(workersData);
       setAppointments(appointmentsData);
-      setServices(servicesData);
 
       // Create a map of customers by ID for easy lookup
       const customersMap = new Map(customersData.map((c) => [c.id, c]));
       setCustomers(customersMap);
 
-      const dashboardStats = await getDashboardStats(ownerId, appointmentsData);
-      // Update stats with actual customer count
-      setStats({
-        ...dashboardStats,
-        totalCustomers: customersData.length,
-      });
+      // Only load services for owners (cashiers don't have access)
+      if (isOwner) {
+        try {
+          const servicesData = await getAllWorkerServices(ownerId);
+          setServices(servicesData);
+        } catch (serviceError) {
+          // Silently fail for services - not critical
+        }
+      }
+
+      // Only load dashboard stats for owners
+      if (isOwner) {
+        const dashboardStats = await getDashboardStats(ownerId, appointmentsData);
+        setStats({
+          ...dashboardStats,
+          totalCustomers: customersData.length,
+        });
+      }
     } catch (error) {
-      console.error('Error loading data:', error);
       showToast('Error loading dashboard data', 'error');
     } finally {
       setLoading(false);
@@ -88,6 +125,11 @@ export function OwnerDashboard() {
   };
 
   const handleAddWorker = async (workerData: Omit<Worker, 'id'>, tempPassword: string) => {
+    if (!isOwner) {
+      showToast('Only owners can add users', 'error');
+      return;
+    }
+
     try {
       // Save worker to database FIRST (while still authenticated as owner)
       console.log('Creating worker in database:', workerData.email);
@@ -95,13 +137,13 @@ export function OwnerDashboard() {
       console.log('Worker created in database with temp password');
 
       // Show success message
-      showToast('Worker added successfully!', 'success');
+      showToast(`${workerData.role === 'cashier' ? 'Cashier' : 'Worker'} added successfully!`, 'success');
 
       // Reload data after a longer delay to allow credentials dialog to be seen
       setTimeout(() => loadData(), 3000);
     } catch (error) {
       console.error('Error adding worker:', error);
-      showToast(error instanceof Error ? error.message : 'Error adding worker', 'error');
+      showToast(error instanceof Error ? error.message : 'Error adding user', 'error');
     }
   };
 
@@ -120,15 +162,20 @@ export function OwnerDashboard() {
   };
 
   const handleDeleteWorker = async (workerId: string) => {
-    if (!window.confirm('Are you sure you want to delete this worker?')) return;
+    if (!isOwner) {
+      showToast('Only owners can delete users', 'error');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
 
     try {
       await deleteWorker(ownerId, workerId);
-      showToast('Worker deleted successfully', 'success');
+      showToast('User deleted successfully', 'success');
       await loadData();
     } catch (error) {
       console.error('Error deleting worker:', error);
-      showToast('Error deleting worker', 'error');
+      showToast('Error deleting user', 'error');
     }
   };
 
@@ -202,7 +249,7 @@ export function OwnerDashboard() {
 
   return (
     <DashboardLayout currentTab={currentTab} onTabChange={setCurrentTab}>
-      {currentTab === 'overview' && (
+      {currentTab === 'overview' && isOwner && (
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
@@ -297,7 +344,7 @@ export function OwnerDashboard() {
         />
       )}
 
-      {currentTab === 'services' && (
+      {currentTab === 'services' && isOwner && (
         <ServiceManagement
           ownerId={ownerId}
           workers={workers}
@@ -321,7 +368,7 @@ export function OwnerDashboard() {
         <CustomerList ownerId={ownerId} />
       )}
 
-      {currentTab === 'analytics' && (
+      {currentTab === 'analytics' && isOwner && (
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Analytics & Reports</h1>
@@ -346,6 +393,11 @@ export function OwnerDashboard() {
           </Card>
         </div>
       )}
+
+      <ChangePasswordDialog
+        isOpen={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+      />
     </DashboardLayout>
   );
 }

@@ -56,6 +56,7 @@ export async function createWorker(
     tempPassword,
     ownerId,
     workerId,
+    role: workerData.role, // Store the role for later retrieval
     createdAt: Date.now(),
     expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // Expires in 7 days
   });

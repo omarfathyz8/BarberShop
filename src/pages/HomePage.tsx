@@ -19,6 +19,8 @@ export function HomePage() {
 
     if (user.role === 'owner') {
       navigate('/admin', { replace: true });
+    } else if (user.role === 'cashier') {
+      navigate('/cashier', { replace: true });
     } else if (user.role === 'worker') {
       navigate('/worker', { replace: true });
     } else if (user.role === 'customer') {
@@ -84,6 +86,18 @@ export function HomePage() {
               <p className="text-gray-600">Manage your barbershop</p>
             </div>
             <Button onClick={() => navigate('/admin')} className="w-full md:w-auto">
+              Go to Dashboard
+            </Button>
+          </div>
+        )}
+
+        {user.role === 'cashier' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Cashier Dashboard</h2>
+              <p className="text-gray-600">Manage operations</p>
+            </div>
+            <Button onClick={() => navigate('/cashier')} className="w-full md:w-auto">
               Go to Dashboard
             </Button>
           </div>

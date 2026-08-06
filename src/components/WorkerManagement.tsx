@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { Worker, WorkingHours, Service, Appointment } from '../types';
+import type { Worker, WorkingHours, Service, Appointment, UserRole } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Dialog } from './ui/Dialog';
 import { WorkerRatingBadge } from './WorkerRatingBadge';
 import * as attendanceService from '../services/attendanceService';
+import { useAuth } from '../hooks/useAuth';
 
 interface WorkerManagementProps {
   workers: (Worker & { firebaseId: string })[];
@@ -36,9 +37,11 @@ export function WorkerManagement({
   onUpdateWorker,
   onDeleteWorker,
 }: WorkerManagementProps) {
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'worker' | 'cashier'>('worker');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -52,6 +55,8 @@ export function WorkerManagement({
   const [attendanceStats, setAttendanceStats] = useState<
     Map<string, { workDays: number; absentDays: number }>
   >(new Map());
+
+  const isOwner = user?.role === 'owner';
 
   useEffect(() => {
     if (!ownerId) return;
@@ -87,9 +92,11 @@ export function WorkerManagement({
         email: worker.email,
         phone: worker.phone,
       });
+      setSelectedRole((worker.role as 'worker' | 'cashier') || 'worker');
     } else {
       setEditingId(null);
       setFormData({ name: '', email: '', phone: '' });
+      setSelectedRole('worker');
     }
     setIsDialogOpen(true);
   };
@@ -98,18 +105,18 @@ export function WorkerManagement({
     setLoading(true);
     try {
       if (editingId) {
-        await onUpdateWorker(editingId, formData);
+        await onUpdateWorker(editingId, { ...formData, role: selectedRole });
         setIsDialogOpen(false);
         setFormData({ name: '', email: '', phone: '' });
       } else {
-        // Generate temporary password for new worker
+        // Generate temporary password for new worker/cashier
         const tempPassword = Math.random().toString(36).substring(2, 10) +
                             Math.random().toString(36).substring(2, 10);
 
         await onAddWorker(
           {
             ...formData,
-            role: 'worker',
+            role: selectedRole,
             workingHours: DEFAULT_HOURS,
           } as Omit<Worker, 'id'>,
           tempPassword
@@ -136,8 +143,8 @@ export function WorkerManagement({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Workers Management</h2>
-        <Button onClick={() => handleOpenDialog()}>+ Add Worker</Button>
+        <h2 className="text-2xl font-bold text-gray-900">Workers & Cashiers Management</h2>
+        {isOwner && <Button onClick={() => handleOpenDialog()}>+ Add User</Button>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -227,52 +234,55 @@ export function WorkerManagement({
                 )}
 
                 <div className="flex space-x-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={async () => {
-                    // Try to fetch credentials from database
-                    try {
-                      const { getTemporaryCredentials } = await import('../services/workerService');
-                      const creds = await getTemporaryCredentials(worker.email);
-                      if (creds) {
-                        setWorkerCredentials({
-                          email: worker.email,
-                          tempPassword: creds.tempPassword,
-                        });
-                      } else {
-                        setWorkerCredentials({
-                          email: worker.email,
-                          tempPassword: '(No temporary password stored)',
-                        });
-                      }
-                    } catch (error) {
-                      console.error('Error fetching credentials:', error);
-                      setWorkerCredentials({
-                        email: worker.email,
-                        tempPassword: '(Error retrieving password)',
-                      });
-                    }
-                    setShowCredentials(true);
-                  }}
-                >
-                  Credentials
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleOpenDialog(worker)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="text-red-600 hover:bg-red-50"
-                  onClick={() => onDeleteWorker(worker.firebaseId)}
-                >
-                  Delete
-                </Button>
+                {isOwner && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const { getTemporaryCredentials } = await import('../services/workerService');
+                          const creds = await getTemporaryCredentials(worker.email);
+                          if (creds) {
+                            setWorkerCredentials({
+                              email: worker.email,
+                              tempPassword: creds.tempPassword,
+                            });
+                          } else {
+                            setWorkerCredentials({
+                              email: worker.email,
+                              tempPassword: '(No temporary password stored)',
+                            });
+                          }
+                        } catch (error) {
+                          console.error('Error fetching credentials:', error);
+                          setWorkerCredentials({
+                            email: worker.email,
+                            tempPassword: '(Error retrieving password)',
+                          });
+                        }
+                        setShowCredentials(true);
+                      }}
+                    >
+                      Credentials
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleOpenDialog(worker)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="text-red-600 hover:bg-red-50"
+                      onClick={() => onDeleteWorker(worker.firebaseId)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
               </div>
               </div>
             </Card>
@@ -283,7 +293,7 @@ export function WorkerManagement({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <div className="space-y-4">
           <h3 className="text-lg font-bold">
-            {editingId ? 'Edit Worker' : 'Add New Worker'}
+            {editingId ? 'Edit User' : 'Add New User'}
           </h3>
 
           <div className="space-y-3">
@@ -309,6 +319,64 @@ export function WorkerManagement({
                 setFormData({ ...formData, phone: e.target.value })
               }
             />
+            {!editingId && (
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Role</label>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="worker"
+                      checked={selectedRole === 'worker'}
+                      onChange={(e) => setSelectedRole(e.target.value as 'worker' | 'cashier')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-700">Worker</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="cashier"
+                      checked={selectedRole === 'cashier'}
+                      onChange={(e) => setSelectedRole(e.target.value as 'worker' | 'cashier')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-700">Cashier</span>
+                  </label>
+                </div>
+              </div>
+            )}
+            {editingId && (
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Role</label>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="worker"
+                      checked={selectedRole === 'worker'}
+                      onChange={(e) => setSelectedRole(e.target.value as 'worker' | 'cashier')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-700">Worker</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="cashier"
+                      checked={selectedRole === 'cashier'}
+                      onChange={(e) => setSelectedRole(e.target.value as 'worker' | 'cashier')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-700">Cashier</span>
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2">
@@ -328,10 +396,10 @@ export function WorkerManagement({
       {showCredentials && workerCredentials && (
         <Dialog open={showCredentials} onOpenChange={setShowCredentials}>
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-green-600">✅ Worker Added Successfully!</h3>
+            <h3 className="text-lg font-bold text-green-600">✅ User Added Successfully!</h3>
 
             <p className="text-gray-700 font-medium">
-              Share these login credentials with the worker:
+              Share these login credentials with the user:
             </p>
 
             <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 space-y-4">
@@ -370,7 +438,7 @@ export function WorkerManagement({
 
             <div className="space-y-2">
               <p className="text-sm font-semibold text-gray-700">
-                📋 Worker Login Instructions:
+                📋 Login Instructions:
               </p>
               <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
                 <li>Go to login page at <a href="https://barber-shop8.vercel.app/login" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">https://barber-shop8.vercel.app/login</a></li>

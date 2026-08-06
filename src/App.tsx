@@ -64,6 +64,15 @@ function App() {
           />
 
           <Route
+            path="/cashier/*"
+            element={
+              <ProtectedRoute allowedRoles={['cashier']}>
+                <OwnerDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/worker/*"
             element={
               <ProtectedRoute allowedRoles={['worker']}>

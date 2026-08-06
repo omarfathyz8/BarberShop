@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { branding } from '../config/branding';
 import { Button } from './ui/Button';
+import { useAuth } from '../hooks/useAuth';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, currentTab, onTabChange }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -24,16 +26,25 @@ export function DashboardLayout({ children, currentTab, onTabChange }: Dashboard
     }
   };
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'workers', label: 'Workers', icon: '👥' },
-    { id: 'services', label: 'Services', icon: '✂️' },
-    { id: 'appointments', label: 'Appointments', icon: '📅' },
-    { id: 'attendance', label: 'Attendance', icon: '✅' },
-    { id: 'customers', label: 'Customers', icon: '👨' },
-    { id: 'ratings', label: 'Ratings', icon: '⭐' },
-    { id: 'analytics', label: 'Analytics', icon: '📈' },
+  const isOwner = user?.role === 'owner';
+  const isCashier = user?.role === 'cashier';
+
+  const allTabs = [
+    { id: 'overview', label: 'Overview', icon: '📊', ownerOnly: true },
+    { id: 'workers', label: 'Workers', icon: '👥', ownerOnly: false },
+    { id: 'services', label: 'Services', icon: '✂️', ownerOnly: true },
+    { id: 'appointments', label: 'Appointments', icon: '📅', ownerOnly: false },
+    { id: 'attendance', label: 'Attendance', icon: '✅', ownerOnly: false },
+    { id: 'customers', label: 'Customers', icon: '👨', ownerOnly: false },
+    { id: 'ratings', label: 'Ratings', icon: '⭐', ownerOnly: false },
+    { id: 'analytics', label: 'Analytics', icon: '📈', ownerOnly: true },
   ];
+
+  const tabs = allTabs.filter(tab => {
+    if (isOwner) return true; // Owner sees all tabs
+    if (isCashier && tab.ownerOnly) return false; // Cashier doesn't see owner-only tabs
+    return !tab.ownerOnly;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">

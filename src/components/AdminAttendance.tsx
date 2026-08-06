@@ -4,6 +4,7 @@ import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { formatDuration, calculateWorkedHours, getAttendanceStatus, formatDate } from '../lib/utils';
 import * as attendanceService from '../services/attendanceService';
+import { useAuth } from '../hooks/useAuth';
 import type { Worker, Attendance } from '../types';
 
 interface AdminAttendanceProps {
@@ -12,12 +13,15 @@ interface AdminAttendanceProps {
 }
 
 export function AdminAttendance({ workers, ownerId }: AdminAttendanceProps) {
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
   const [attendanceMap, setAttendanceMap] = useState<Map<string, Attendance & { firebaseId: string }>>(
     new Map()
   );
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  const isCashier = user?.role === 'cashier';
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -156,7 +160,7 @@ export function AdminAttendance({ workers, ownerId }: AdminAttendanceProps) {
                 </tr>
               </thead>
               <tbody>
-                {workers.map((worker) => {
+                {workers.filter(w => !isCashier || w.role === 'worker').map((worker) => {
                   const attendance = getWorkerAttendance(worker.firebaseId);
                   const status = getAttendanceStatus(attendance.arrivalTime, attendance.departureTime);
                   const { duration, isActive } = calculateWorkedHours(

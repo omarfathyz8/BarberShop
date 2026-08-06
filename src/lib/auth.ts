@@ -26,8 +26,8 @@ export async function registerUser(
     role,
   };
 
-  // If registering as a worker, check if they were pre-added by an owner
-  if (role === 'worker') {
+  // If registering as a worker or cashier, check if they were pre-added by an owner
+  if (role === 'worker' || role === 'cashier') {
     try {
       const workerRecord = await findWorkerByEmailAcrossOwners(email);
       if (workerRecord) {
@@ -41,8 +41,7 @@ export async function registerUser(
           email,
         };
         await set(ref(db, `workers/${ownerId}/${workerId}`), updatedWorkerData);
-        console.log('Linked worker account to pre-added worker record');
-      }
+        }
     } catch (error) {
       console.error('Error checking for existing worker record:', error);
     }
@@ -70,7 +69,6 @@ async function findWorkerByEmailAcrossOwners(
   email: string
 ): Promise<{ ownerId: string; workerId: string; existingData: any } | null> {
   try {
-    console.log('Finding worker by email across all owners:', email);
 
     // Try to read temporaryCredentials to find the ownerId
     const encodedEmail = encodeEmail(email);
@@ -87,7 +85,6 @@ async function findWorkerByEmailAcrossOwners(
       const workerSnapshot = await get(workerRef);
 
       if (workerSnapshot.exists()) {
-        console.log('Found worker via temp credentials:', { email, workerId, ownerId });
         return {
           ownerId,
           workerId,
@@ -98,7 +95,6 @@ async function findWorkerByEmailAcrossOwners(
 
     return null;
   } catch (error) {
-    console.error('Error searching for worker by email:', error);
     return null;
   }
 }
@@ -112,11 +108,9 @@ export async function loginUser(email: string, password: string): Promise<Fireba
   try {
     // Try normal login first
     const credential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('User logged in:', email);
 
     // For existing users, fetch their data and store relevant info
     const userData = await getUserData(credential.user.uid);
-    console.log('User data from firebase:', userData);
 
     if (userData && userData.role === 'owner') {
       localStorage.setItem('ownerId', credential.user.uid);
@@ -125,11 +119,10 @@ export async function loginUser(email: string, password: string): Promise<Fireba
       try {
         await set(ref(db, 'shopConfig/currentOwnerId'), credential.user.uid);
       } catch (error) {
-        console.error('Error storing owner ID globally:', error);
         // Don't fail login if this fails
       }
-    } else if (userData && userData.role === 'worker') {
-      // Worker data should be in the user record
+    } else if (userData && (userData.role === 'worker' || userData.role === 'cashier')) {
+      // Worker/Cashier data should be in the user record
       const workerUser = userData as any;
       if (workerUser.workerId && workerUser.ownerId) {
         localStorage.setItem('ownerId', workerUser.ownerId);
@@ -137,31 +130,23 @@ export async function loginUser(email: string, password: string): Promise<Fireba
           workerId: workerUser.workerId,
           ownerId: workerUser.ownerId,
         }));
-        console.log('Loaded worker from user record:', { workerId: workerUser.workerId, ownerId: workerUser.ownerId });
       } else {
         // Fallback: find worker by email using temporary credentials
-        console.log('No worker data in user record, searching by email');
         const workerRecord = await findWorkerByEmailAcrossOwners(email);
         if (workerRecord) {
-          console.log('Found worker record:', workerRecord);
           const dataToStore = {
             workerId: workerRecord.workerId,
             ownerId: workerRecord.ownerId,
           };
-          console.log('Storing in localStorage:', dataToStore);
           localStorage.setItem('ownerId', workerRecord.ownerId);
           localStorage.setItem('workerData', JSON.stringify(dataToStore));
-          console.log('Stored successfully. Verification:', {
-            storedOwnerId: localStorage.getItem('ownerId'),
-            storedWorkerData: localStorage.getItem('workerData'),
-          });
 
-          // Update user record with worker info for future logins
+          // Update user record with worker/cashier info for future logins
           try {
             await set(ref(db, `users/${credential.user.uid}`), {
               id: credential.user.uid,
               email,
-              role: 'worker',
+              role: userData.role,
               workerId: workerRecord.workerId,
               ownerId: workerRecord.ownerId,
             });
@@ -171,28 +156,31 @@ export async function loginUser(email: string, password: string): Promise<Fireba
         }
       }
     } else {
-      // If no role found, check if this email belongs to a worker
-      console.log('No role found in user data, checking if worker exists');
+      // If no role found, check if this email belongs to a worker or cashier
       const workerRecord = await findWorkerByEmailAcrossOwners(email);
       if (workerRecord) {
-        console.log('Found worker, creating user record');
         localStorage.setItem('ownerId', workerRecord.ownerId);
         localStorage.setItem('workerData', JSON.stringify({
           workerId: workerRecord.workerId,
           ownerId: workerRecord.ownerId,
         }));
 
-        // Create user record
+        // Create user record - determine role from the temp credentials
         try {
+          const encodedEmail = encodeEmail(email);
+          const tempCredRef = ref(db, `temporaryCredentials/${encodedEmail}`);
+          const tempCredSnapshot = await get(tempCredRef);
+          const tempCredData = tempCredSnapshot.exists() ? tempCredSnapshot.val() : {};
+          const tempCredRole = tempCredData.role || 'worker';
+
           await set(ref(db, `users/${credential.user.uid}`), {
             id: credential.user.uid,
             email,
-            role: 'worker',
+            role: tempCredRole,
             workerId: workerRecord.workerId,
             ownerId: workerRecord.ownerId,
           });
         } catch (e) {
-          console.error('Failed to create user record:', e);
         }
       }
     }
@@ -203,35 +191,50 @@ export async function loginUser(email: string, password: string): Promise<Fireba
       try {
         const tempCredential = await verifyTemporaryCredentials(email, password);
 
-        if (tempCredential && tempCredential.valid && tempCredential.ownerId && tempCredential.workerId) {
-          const credential = await createUserWithEmailAndPassword(auth, email, password);
-          const userId = credential.user.uid;
+        if (!tempCredential) {
+            throw new Error('Invalid email or password');
+        }
 
-          localStorage.setItem('ownerId', tempCredential.ownerId);
-          localStorage.setItem('workerData', JSON.stringify({
+        if (!tempCredential.valid) {
+            throw new Error('Invalid email or password');
+        }
+
+        if (!tempCredential.ownerId || !tempCredential.workerId) {
+            throw new Error('Invalid email or password');
+        }
+
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        const userId = credential.user.uid;
+
+        localStorage.setItem('ownerId', tempCredential.ownerId);
+        localStorage.setItem('workerData', JSON.stringify({
+          workerId: tempCredential.workerId,
+          ownerId: tempCredential.ownerId,
+        }));
+        localStorage.setItem('workerFirstLogin', 'true');
+
+        // Store worker/cashier info in the user record for easier lookup later
+        const userRole = tempCredential.role || 'worker';
+        try {
+          await set(ref(db, `users/${userId}`), {
+            id: userId,
+            email,
+            role: userRole,
             workerId: tempCredential.workerId,
             ownerId: tempCredential.ownerId,
-          }));
-          localStorage.setItem('workerFirstLogin', 'true');
-
-          try {
-            await update(ref(db, `workers/${tempCredential.ownerId}/${tempCredential.workerId}`), { id: userId });
-            // Also store worker info in the user record for easier lookup later
-            await set(ref(db, `users/${userId}`), {
-              id: userId,
-              email,
-              role: 'worker',
-              workerId: tempCredential.workerId,
-              ownerId: tempCredential.ownerId,
-            });
-          } catch (updateError) {
-            // Don't fail here - the worker can still login
-          }
-
-          return credential.user;
-        } else {
-          throw new Error('Invalid email or password');
+          });
+        } catch (userRecordError) {
+          // User record creation failed, but worker can still login
         }
+
+        // Update worker record with the new user ID
+        try {
+          await update(ref(db, `workers/${tempCredential.ownerId}/${tempCredential.workerId}`), { id: userId });
+        } catch (workerUpdateError) {
+          // Worker update failed, but user can still login
+        }
+
+        return credential.user;
       } catch (tempVerifyError) {
         throw new Error('Invalid email or password');
       }
@@ -240,20 +243,17 @@ export async function loginUser(email: string, password: string): Promise<Fireba
   }
 }
 
-async function verifyTemporaryCredentials(email: string, password: string): Promise<{ valid: boolean; ownerId?: string; workerId?: string } | null> {
+async function verifyTemporaryCredentials(email: string, password: string): Promise<{ valid: boolean; ownerId?: string; workerId?: string; role?: string } | null> {
   try {
     const encodedEmail = encodeEmail(email);
-    console.log('Verifying temp credentials for:', { email, encodedEmail });
     const credRef = ref(db, `temporaryCredentials/${encodedEmail}`);
     const snapshot = await get(credRef);
 
     if (!snapshot.exists()) {
-      console.log('No temp credentials found for email:', email);
       return null;
     }
 
     const cred = snapshot.val();
-    console.log('Found temp credentials:', { email: cred.email, workerId: cred.workerId, ownerId: cred.ownerId });
 
     // Check if credentials are still valid (not expired)
     if (cred.expiresAt && cred.expiresAt < Date.now()) {
@@ -264,17 +264,16 @@ async function verifyTemporaryCredentials(email: string, password: string): Prom
     const passwordMatches = cred.tempPassword === password;
 
     if (passwordMatches) {
-      console.log('Password matched, returning:', { ownerId: cred.ownerId, workerId: cred.workerId });
       return {
         valid: true,
         ownerId: cred.ownerId,
         workerId: cred.workerId,
+        role: cred.role || 'worker', // Default to worker if not specified
       };
     }
 
     return { valid: false };
   } catch (error) {
-    console.error('Error verifying temporary credentials:', error);
     return null;
   }
 }
@@ -285,15 +284,15 @@ export async function logoutUser(): Promise<void> {
 
 export async function getUserData(userId: string): Promise<User | null> {
   try {
-    // Try to get from users collection (for owners and customers)
+    // Try to get from users collection (for owners, customers, workers, and cashiers)
     const userSnapshot = await get(ref(db, `users/${userId}`));
     if (userSnapshot.exists()) {
       return userSnapshot.val();
     }
 
-    // If not in users collection, this might be a worker that hasn't logged in yet
+    // If not in users collection, this might be a worker/cashier that hasn't logged in yet
     // Return a minimal user object with role 'worker' so they can access their dashboard
-    // The actual worker details will be fetched when needed from the workers collection
+    // The actual worker/cashier details will be fetched when needed from the workers collection
     return {
       id: userId,
       name: '',
@@ -302,7 +301,6 @@ export async function getUserData(userId: string): Promise<User | null> {
       role: 'worker',
     };
   } catch (error) {
-    console.error('Error fetching user data:', error);
     return null;
   }
 }
