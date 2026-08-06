@@ -10,7 +10,7 @@ import { BookingStep2ServiceSelection } from '../components/BookingStep2ServiceS
 import { BookingStep3DateTimeSelection } from '../components/BookingStep3DateTimeSelection';
 import { BookingReview } from '../components/BookingReview';
 import { branding } from '../config/branding';
-import { sendEmail, generateAppointmentConfirmationEmail } from '../services/brevoService';
+import { sendEmail, generateAppointmentConfirmationEmail, generateWorkerNotificationEmail } from '../services/brevoService';
 import * as workerService from '../services/workerService';
 import * as serviceService from '../services/serviceService';
 import * as appointmentService from '../services/appointmentService';
@@ -257,7 +257,7 @@ export function BookingPage() {
 
         await appointmentService.createAppointment(ownerId, appointmentData);
 
-        // Send confirmation email
+        // Send confirmation emails
         try {
           const customer = await customerService.getCustomer(user.id);
           const appointmentDate = new Date(appointmentDateTime);
@@ -275,7 +275,8 @@ export function BookingPage() {
 
           const serviceNames = currentServices.map(s => s.name).join(', ');
 
-          const htmlContent = generateAppointmentConfirmationEmail(
+          // Send email to customer
+          const customerHtmlContent = generateAppointmentConfirmationEmail(
             customer?.name || 'Customer',
             currentWorker?.name || 'Barber',
             formattedDate,
@@ -286,7 +287,24 @@ export function BookingPage() {
           await sendEmail({
             to: [{ email: user.email, name: customer?.name }],
             subject: 'Appointment Confirmation - BarberHub',
-            htmlContent
+            htmlContent: customerHtmlContent
+          });
+
+          // Send email to worker
+          const workerHtmlContent = generateWorkerNotificationEmail(
+            currentWorker?.name || 'Barber',
+            customer?.name || 'Customer',
+            customer?.phone || 'N/A',
+            formattedDate,
+            formattedTime,
+            serviceNames,
+            totalPrice
+          );
+
+          await sendEmail({
+            to: [{ email: currentWorker?.email || '', name: currentWorker?.name }],
+            subject: 'New Appointment Request - BarberHub',
+            htmlContent: workerHtmlContent
           });
         } catch (emailError) {
           console.error('Error sending confirmation email:', emailError);

@@ -21,7 +21,7 @@ export function WorkerStats({ appointments }: WorkerStatsProps) {
 
   const approvedAppointments = appointments.filter((apt) => apt.status === 'approved');
 
-  const totalEarnings = appointments
+  const dailyEarnings = todayAppointments
     .filter((apt) => apt.status === 'completed')
     .reduce((sum, apt) => sum + apt.totalPrice, 0);
 
@@ -53,8 +53,8 @@ export function WorkerStats({ appointments }: WorkerStatsProps) {
       color: 'text-green-500',
     },
     {
-      label: 'Total Earnings',
-      value: `${totalEarnings.toFixed(2)} LE`,
+      label: "Today's Earnings",
+      value: `${dailyEarnings.toFixed(2)} LE`,
       icon: '💰',
       color: 'bg-yellow-100 text-yellow-600',
     },
