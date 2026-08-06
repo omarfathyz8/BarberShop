@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Worker, WorkingHours, Service, Appointment } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Dialog } from './ui/Dialog';
 import { WorkerRatingBadge } from './WorkerRatingBadge';
+import * as attendanceService from '../services/attendanceService';
 
 interface WorkerManagementProps {
   workers: (Worker & { firebaseId: string })[];
   services?: Map<string, (Service & { firebaseId: string })[]>;
   appointments?: (Appointment & { firebaseId: string })[];
+  ownerId?: string;
   onAddWorker: (data: Omit<Worker, 'id'>, tempPassword: string) => Promise<void>;
   onUpdateWorker: (workerId: string, data: Partial<Worker>) => Promise<void>;
   onDeleteWorker: (workerId: string) => Promise<void>;
@@ -29,6 +31,7 @@ export function WorkerManagement({
   workers,
   services,
   appointments,
+  ownerId = '',
   onAddWorker,
   onUpdateWorker,
   onDeleteWorker,
@@ -46,6 +49,35 @@ export function WorkerManagement({
     email: string;
     tempPassword: string;
   } | null>(null);
+  const [attendanceStats, setAttendanceStats] = useState<
+    Map<string, { workDays: number; absentDays: number }>
+  >(new Map());
+
+  useEffect(() => {
+    if (!ownerId) return;
+    loadAttendanceStats();
+  }, [ownerId, workers]);
+
+  const loadAttendanceStats = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const stats = new Map<string, { workDays: number; absentDays: number }>();
+
+    for (const worker of workers) {
+      try {
+        const workerStats = await attendanceService.getWorkerAttendanceStats(
+          ownerId,
+          worker.firebaseId,
+          '2020-01-01',
+          today
+        );
+        stats.set(worker.firebaseId, workerStats);
+      } catch (error) {
+        console.error(`Error loading attendance stats for ${worker.firebaseId}:`, error);
+      }
+    }
+
+    setAttendanceStats(stats);
+  };
 
   const handleOpenDialog = (worker?: Worker & { firebaseId: string }) => {
     if (worker) {
@@ -155,6 +187,23 @@ export function WorkerManagement({
                     <p className="text-2xl font-bold text-green-600">{workerCompletedAppointments.length}</p>
                   </div>
                 </div>
+
+                {ownerId && (
+                  <div className="grid grid-cols-2 gap-3 py-3 border-b border-gray-200">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-600">Work Days</p>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {attendanceStats.get(worker.firebaseId)?.workDays || 0}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-600">Absent Days</p>
+                      <p className="text-2xl font-bold text-red-600">
+                        {attendanceStats.get(worker.firebaseId)?.absentDays || 0}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {workerServices.length > 0 && (
                   <div className="bg-gray-50 rounded p-3">

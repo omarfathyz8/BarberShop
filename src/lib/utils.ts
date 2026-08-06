@@ -56,3 +56,54 @@ export function getTimeSlots(
 export function getDayName(date: Date): string {
   return format(date, 'EEEE').toLowerCase() as any;
 }
+
+export function formatDuration(milliseconds: number): string {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (hours === 0) {
+    return `${minutes}m`;
+  }
+  if (minutes === 0) {
+    return `${hours}h`;
+  }
+  return `${hours}h ${minutes}m`;
+}
+
+export function calculateWorkedHours(
+  arrivalTime: number | null,
+  departureTime: number | null,
+  currentTime?: number
+): { duration: number; isActive: boolean } {
+  if (arrivalTime === null) {
+    return { duration: 0, isActive: false };
+  }
+
+  const now = currentTime || Date.now();
+
+  if (departureTime !== null) {
+    return {
+      duration: departureTime - arrivalTime,
+      isActive: false,
+    };
+  }
+
+  return {
+    duration: now - arrivalTime,
+    isActive: true,
+  };
+}
+
+export function getAttendanceStatus(
+  arrivalTime: number | null,
+  departureTime: number | null
+): 'absent' | 'working' | 'done' {
+  if (arrivalTime === null) {
+    return 'absent';
+  }
+  if (departureTime === null) {
+    return 'working';
+  }
+  return 'done';
+}

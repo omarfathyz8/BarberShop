@@ -85,3 +85,15 @@ export interface AvailableSlot {
   time: string;
   timestamp: number;
 }
+
+export interface Attendance {
+  id: string;
+  workerId: string;
+  date: string;
+  arrivalTime: number | null;
+  departureTime: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type AttendanceStatus = 'absent' | 'working' | 'done';

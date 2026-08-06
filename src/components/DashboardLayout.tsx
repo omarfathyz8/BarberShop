@@ -29,6 +29,7 @@ export function DashboardLayout({ children, currentTab, onTabChange }: Dashboard
     { id: 'workers', label: 'Workers', icon: '👥' },
     { id: 'services', label: 'Services', icon: '✂️' },
     { id: 'appointments', label: 'Appointments', icon: '📅' },
+    { id: 'attendance', label: 'Attendance', icon: '✅' },
     { id: 'customers', label: 'Customers', icon: '👨' },
     { id: 'ratings', label: 'Ratings', icon: '⭐' },
     { id: 'analytics', label: 'Analytics', icon: '📈' },

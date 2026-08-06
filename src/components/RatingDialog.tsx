@@ -8,7 +8,7 @@ interface RatingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   worker: (Worker & { firebaseId: string }) | null;
-  customerName: string;
+  customerName?: string;
   onSubmit: (rating: number, notes?: string, appointmentId?: string) => Promise<void>;
   isLoading?: boolean;
   appointmentId?: string;
@@ -18,7 +18,7 @@ export function RatingDialog({
   open,
   onOpenChange,
   worker,
-  customerName,
+  customerName: _customerName,
   onSubmit,
   isLoading = false,
   appointmentId,

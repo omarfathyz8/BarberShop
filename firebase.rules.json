@@ -52,6 +52,20 @@
       "$encodedEmail": {
         ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'"
       }
+    },
+    "attendance": {
+      "$ownerId": {
+        ".read": "root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('users').child(auth.uid).child('role').val() === 'worker'",
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'",
+        "$workerId": {
+          ".read": "root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('users').child(auth.uid).child('role').val() === 'worker'",
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'",
+          "$date": {
+            ".read": "root.child('users').child(auth.uid).child('role').val() === 'owner' || root.child('users').child(auth.uid).child('role').val() === 'worker'",
+            ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner'"
+          }
+        }
+      }
     }
   }
 }

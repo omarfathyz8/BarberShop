@@ -15,7 +15,7 @@ export function Checkbox({ checked = false, onChange, disabled = false, classNam
       onChange={(e) => onChange?.(e.target.checked)}
       disabled={disabled}
       className={cn(
-        'w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer',
+        'w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer',
         disabled && 'opacity-50 cursor-not-allowed',
         className
       )}

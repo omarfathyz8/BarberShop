@@ -9,6 +9,7 @@ import { AppointmentDetail } from '../components/AppointmentDetail';
 import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 import { WorkerScheduleDialog } from '../components/WorkerScheduleDialog';
 import { WorkerRatingsDisplay } from '../components/WorkerRatingsDisplay';
+import { WorkerAttendanceCard } from '../components/WorkerAttendanceCard';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import * as appointmentService from '../services/appointmentService';
@@ -29,9 +30,9 @@ export function WorkerDashboard() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
-  const [ownerId, setOwnerId] = useState<string>(''); // NEW: track ownerId in state so we can pass it down
+  const [ownerId, setOwnerId] = useState<string>('');
+  const [workerId, setWorkerId] = useState<string>('');
 
-  // Get current user's UID and worker ID
   const currentUser = auth.currentUser;
   if (!currentUser) {
     navigate('/login');
@@ -60,11 +61,10 @@ export function WorkerDashboard() {
           return;
         }
 
-        let workerId: string;
+        let resolvedWorkerId: string;
         const resolvedOwnerId: string = cachedOwnerId;
-        setOwnerId(resolvedOwnerId); // NEW: store ownerId in state
+        setOwnerId(resolvedOwnerId);
 
-        // Get workerId from localStorage
         if (!cachedWorkerData) {
           console.error('Worker data not found in localStorage');
           showToast('Worker session invalid. Please login again.', 'error');
@@ -74,7 +74,8 @@ export function WorkerDashboard() {
 
         try {
           const parsed = JSON.parse(cachedWorkerData);
-          workerId = parsed.workerId;
+          resolvedWorkerId = parsed.workerId;
+          setWorkerId(resolvedWorkerId);
         } catch (e) {
           console.error('Failed to parse worker data from localStorage:', e);
           showToast('Invalid worker data. Please login again.', 'error');
@@ -83,19 +84,19 @@ export function WorkerDashboard() {
         }
 
         // Fetch worker details
-        const workerData = await workerService.getWorker(resolvedOwnerId, workerId);
+        const workerData = await workerService.getWorker(resolvedOwnerId, resolvedWorkerId);
         if (workerData) {
           setWorker(workerData);
         } else {
-          console.error('No worker data returned for:', { ownerId: resolvedOwnerId, workerId });
+          console.error('No worker data returned for:', { ownerId: resolvedOwnerId, workerId: resolvedWorkerId });
         }
 
         // Fetch worker's appointments
-        const workerAppointments = await appointmentService.getWorkerAppointments(resolvedOwnerId, workerId);
+        const workerAppointments = await appointmentService.getWorkerAppointments(resolvedOwnerId, resolvedWorkerId);
         setAppointments(workerAppointments);
 
         // Fetch worker's services
-        const workerServices = await serviceService.getWorkerServices(resolvedOwnerId, workerId);
+        const workerServices = await serviceService.getWorkerServices(resolvedOwnerId, resolvedWorkerId);
         setServices(workerServices);
       } catch (error) {
         console.error('Error loading worker data:', error);
@@ -305,6 +306,13 @@ export function WorkerDashboard() {
                 <p className="text-gray-500">Unable to load schedule information</p>
               )}
             </Card>
+          </div>
+        )}
+
+        {currentTab === 'attendance' && ownerId && workerId && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Attendance</h2>
+            <WorkerAttendanceCard ownerId={ownerId} workerId={workerId} />
           </div>
         )}
 

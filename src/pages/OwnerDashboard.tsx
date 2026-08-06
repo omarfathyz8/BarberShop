@@ -9,6 +9,7 @@ import { AppointmentManagement } from '../components/AppointmentManagement';
 import { CustomerList } from '../components/CustomerList';
 import { AnalyticsCharts } from '../components/AnalyticsCharts';
 import { AllRatingsView } from '../components/AllRatingsView';
+import { AdminAttendance } from '../components/AdminAttendance';
 import { Card } from '../components/ui/Card';
 import { formatDateTime } from '../lib/utils';
 import {
@@ -289,6 +290,7 @@ export function OwnerDashboard() {
           workers={workers}
           services={services}
           appointments={appointments}
+          ownerId={ownerId}
           onAddWorker={handleAddWorker}
           onUpdateWorker={handleUpdateWorker}
           onDeleteWorker={handleDeleteWorker}
@@ -327,6 +329,10 @@ export function OwnerDashboard() {
           </div>
           <AnalyticsCharts appointments={appointments} ownerId={ownerId} />
         </div>
+      )}
+
+      {currentTab === 'attendance' && (
+        <AdminAttendance workers={workers} ownerId={ownerId} />
       )}
 
       {currentTab === 'ratings' && (
