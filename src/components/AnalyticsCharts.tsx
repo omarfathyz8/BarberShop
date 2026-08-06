@@ -26,6 +26,26 @@ interface AnalyticsChartsProps {
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'];
 
+interface WorkerTooltipProps {
+  active?: boolean;
+  payload?: Array<{ dataKey: string; value: number | string; name: string; payload: { workerName: string; completedAppointments: number; revenue: number } }>;
+  label?: string;
+}
+
+function WorkerPerformanceTooltip({ active, payload }: WorkerTooltipProps) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as { workerName: string; completedAppointments: number; revenue: number };
+    return (
+      <div className="bg-white p-3 border border-gray-300 rounded shadow">
+        <p className="font-semibold text-gray-900">{data.workerName}</p>
+        <p className="text-sm" style={{ color: '#3b82f6' }}>Appointments: {data.completedAppointments}</p>
+        <p className="text-sm" style={{ color: '#10b981' }}>Revenue: {data.revenue.toFixed(2)} LE</p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export function AnalyticsCharts({ appointments, ownerId }: AnalyticsChartsProps) {
   const [workerPerformanceData, setWorkerPerformanceData] = useState<WorkerPerformance[]>([]);
   const [serviceRevenueData, setServiceRevenueData] = useState<ServiceRevenue[]>([]);
@@ -230,12 +250,7 @@ export function AnalyticsCharts({ appointments, ownerId }: AnalyticsChartsProps)
                   orientation="right"
                   label={{ value: 'Revenue (LE)', angle: 90, position: 'center', dx: 20 }}
                 />
-                <Tooltip
-                  formatter={(value, name) => {
-                    if (name === 'completedAppointments') return [value, 'Completed Appointments'];
-                    return [`${typeof value === 'number' ? value.toFixed(2) : value} LE`, 'Revenue'];
-                  }}
-                />
+                <Tooltip content={<WorkerPerformanceTooltip />} />
                 <Legend />
                 <Bar yAxisId="left" dataKey="completedAppointments" fill="#3b82f6" name="Completed Appointments" />
                 <Bar yAxisId="right" dataKey="revenue" fill="#10b981" name="Revenue (LE)" />
