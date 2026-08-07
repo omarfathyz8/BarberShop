@@ -30,6 +30,7 @@ export function WorkerLayout({ children, currentTab, onTabChange, workerName = '
     { id: 'schedule', label: 'My Schedule', icon: '⏰' },
     { id: 'attendance', label: 'Attendance', icon: '✅' },
     { id: 'ratings', label: 'My Rating', icon: '⭐' },
+    { id: 'financials', label: 'Financials', icon: '💰' },
   ];
 
   return (

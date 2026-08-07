@@ -10,6 +10,7 @@ import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 import { WorkerScheduleDialog } from '../components/WorkerScheduleDialog';
 import { WorkerRatingsDisplay } from '../components/WorkerRatingsDisplay';
 import { WorkerAttendanceCard } from '../components/WorkerAttendanceCard';
+import { PersonalFinancials } from '../components/PersonalFinancials';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import * as appointmentService from '../services/appointmentService';
@@ -332,6 +333,13 @@ export function WorkerDashboard() {
               )}
             </Card>
           </div>
+        )}
+
+        {currentTab === 'financials' && ownerId && currentUser?.uid && (
+          <PersonalFinancials
+            employeeId={currentUser.uid}
+            ownerId={ownerId}
+          />
         )}
 
         <AppointmentDetail

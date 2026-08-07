@@ -10,6 +10,8 @@ import { CustomerList } from '../components/CustomerList';
 import { AnalyticsCharts } from '../components/AnalyticsCharts';
 import { AllRatingsView } from '../components/AllRatingsView';
 import { AdminAttendance } from '../components/AdminAttendance';
+import { FinancialManagement } from '../components/FinancialManagement';
+import { PersonalFinancials } from '../components/PersonalFinancials';
 import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 import { Card } from '../components/ui/Card';
 import { formatDateTime } from '../lib/utils';
@@ -380,6 +382,34 @@ export function OwnerDashboard() {
 
       {currentTab === 'attendance' && (
         <AdminAttendance workers={workers} ownerId={ownerId} />
+      )}
+
+      {currentTab === 'financials' && isCashier && (
+        <div className="space-y-12">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">My Financials</h2>
+            <PersonalFinancials
+              employeeId={user?.id || ''}
+              ownerId={ownerId}
+            />
+          </div>
+
+          <div className="border-t pt-12">
+            <FinancialManagement
+              workers={workers}
+              ownerId={ownerId}
+              isCashier={isCashier}
+            />
+          </div>
+        </div>
+      )}
+
+      {currentTab === 'financials' && !isCashier && (
+        <FinancialManagement
+          workers={workers}
+          ownerId={ownerId}
+          isCashier={isCashier}
+        />
       )}
 
       {currentTab === 'ratings' && (

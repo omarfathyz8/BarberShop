@@ -99,3 +99,16 @@ export interface Attendance {
 }
 
 export type AttendanceStatus = 'absent' | 'working' | 'done';
+
+export type TransactionType = 'bonus' | 'deduction' | 'withdrawal';
+
+export interface Transaction {
+  id: string;
+  employeeId: string;
+  type: TransactionType;
+  amount: number;
+  reason: string;
+  date: string;
+  createdBy: string;
+  createdAt: number;
+}

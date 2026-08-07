@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Worker, WorkingHours, Service, Appointment, UserRole } from '../types';
+import type { Worker, WorkingHours, Service, Appointment } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -184,16 +184,18 @@ export function WorkerManagement({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 py-3 border-y border-gray-200">
-                  <div className="text-center">
-                    <p className="text-xs text-gray-600">All Appointments</p>
-                    <p className="text-2xl font-bold text-blue-600">{workerAllAppointments.length}</p>
+                {worker.role === 'worker' && (
+                  <div className="grid grid-cols-2 gap-3 py-3 border-y border-gray-200">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-600">All Appointments</p>
+                      <p className="text-2xl font-bold text-blue-600">{workerAllAppointments.length}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-600">Completed Appointments</p>
+                      <p className="text-2xl font-bold text-green-600">{workerCompletedAppointments.length}</p>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-600">Completed Appointments</p>
-                    <p className="text-2xl font-bold text-green-600">{workerCompletedAppointments.length}</p>
-                  </div>
-                </div>
+                )}
 
                 {ownerId && (
                   <div className="grid grid-cols-2 gap-3 py-3 border-b border-gray-200">
