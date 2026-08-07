@@ -112,3 +112,12 @@ export interface Transaction {
   createdBy: string;
   createdAt: number;
 }
+
+export interface Expense {
+  id: string;
+  amount: number;
+  reason: string;
+  date: string;
+  createdBy: string;
+  createdAt: number;
+}

@@ -12,6 +12,7 @@ import { AllRatingsView } from '../components/AllRatingsView';
 import { AdminAttendance } from '../components/AdminAttendance';
 import { FinancialManagement } from '../components/FinancialManagement';
 import { PersonalFinancials } from '../components/PersonalFinancials';
+import { ExpenseManagement } from '../components/ExpenseManagement';
 import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
 import { Card } from '../components/ui/Card';
 import { formatDateTime } from '../lib/utils';
@@ -409,6 +410,13 @@ export function OwnerDashboard() {
           workers={workers}
           ownerId={ownerId}
           isCashier={isCashier}
+        />
+      )}
+
+      {currentTab === 'expenses' && (
+        <ExpenseManagement
+          ownerId={ownerId}
+          isAdmin={isOwner}
         />
       )}
 

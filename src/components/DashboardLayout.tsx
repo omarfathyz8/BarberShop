@@ -36,6 +36,7 @@ export function DashboardLayout({ children, currentTab, onTabChange }: Dashboard
     { id: 'appointments', label: 'Appointments', icon: '📅', ownerOnly: false },
     { id: 'attendance', label: 'Attendance', icon: '✅', ownerOnly: false },
     { id: 'financials', label: 'Financials', icon: '💰', ownerOnly: false },
+    { id: 'expenses', label: 'Expenses', icon: '💸', ownerOnly: false },
     { id: 'customers', label: 'Customers', icon: '👨', ownerOnly: false },
     { id: 'ratings', label: 'Ratings', icon: '⭐', ownerOnly: false },
     { id: 'analytics', label: 'Analytics', icon: '📈', ownerOnly: true },

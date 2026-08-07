@@ -78,6 +78,16 @@
           ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner' || (root.child('users').child(auth.uid).child('role').val() === 'cashier' && root.child('users').child(auth.uid).child('ownerId').val() === $ownerId && (newData.child('employeeId').val() !== auth.uid || !newData.exists()))"
         }
       }
+    },
+    "expenses": {
+      "$ownerId": {
+        ".read": "root.child('users').child(auth.uid).child('role').val() === 'owner' || (root.child('users').child(auth.uid).child('role').val() === 'cashier' && root.child('users').child(auth.uid).child('ownerId').val() === $ownerId)",
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner' || (root.child('users').child(auth.uid).child('role').val() === 'cashier' && root.child('users').child(auth.uid).child('ownerId').val() === $ownerId)",
+        "$expenseId": {
+          ".read": "root.child('users').child(auth.uid).child('role').val() === 'owner' || (root.child('users').child(auth.uid).child('role').val() === 'cashier' && root.child('users').child(auth.uid).child('ownerId').val() === $ownerId)",
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'owner' || (root.child('users').child(auth.uid).child('role').val() === 'cashier' && root.child('users').child(auth.uid).child('ownerId').val() === $ownerId)"
+        }
+      }
     }
   }
 }
