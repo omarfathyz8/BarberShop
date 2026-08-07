@@ -16,7 +16,8 @@ import { Button } from '../components/ui/Button';
 import * as appointmentService from '../services/appointmentService';
 import * as serviceService from '../services/serviceService';
 import * as workerService from '../services/workerService';
-import type { Appointment, Service, Worker, WorkingHours } from '../types';
+import * as attendanceService from '../services/attendanceService';
+import type { Appointment, Service, Worker, WorkingHours, Attendance, SimpleRating } from '../types';
 
 export function WorkerDashboard() {
   const navigate = useNavigate();
@@ -33,6 +34,8 @@ export function WorkerDashboard() {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [ownerId, setOwnerId] = useState<string>('');
   const [workerId, setWorkerId] = useState<string>('');
+  const [todayAttendance, setTodayAttendance] = useState<(Attendance & { firebaseId: string }) | undefined>();
+  const [ratings, setRatings] = useState<SimpleRating[]>([]);
 
   const currentUser = auth.currentUser;
   if (!currentUser) {
@@ -99,6 +102,16 @@ export function WorkerDashboard() {
         // Fetch worker's services
         const workerServices = await serviceService.getWorkerServices(resolvedOwnerId, resolvedWorkerId);
         setServices(workerServices);
+
+        // Fetch today's attendance
+        const today = new Date().toISOString().split('T')[0];
+        const attendanceData = await attendanceService.getAttendanceForDate(resolvedOwnerId, resolvedWorkerId, today);
+        setTodayAttendance(attendanceData || undefined);
+
+        // Fetch worker ratings
+        if (workerData?.ratings) {
+          setRatings(workerData.ratings);
+        }
       } catch (error) {
         console.error('Error loading worker data:', error);
         showToast('Failed to load worker data', 'error');
@@ -236,7 +249,7 @@ export function WorkerDashboard() {
           <p className="text-gray-600 mt-1">Manage your appointments and schedule</p>
         </div>
 
-        <WorkerStats appointments={appointments} />
+        <WorkerStats appointments={appointments} todayAttendance={todayAttendance} ratings={ratings} />
 
         {currentTab === 'appointments' && (
           <div>

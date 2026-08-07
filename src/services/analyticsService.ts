@@ -1,6 +1,8 @@
 import type { Appointment, Service } from '../types';
 import { getWorkers } from './workerService';
 import { getAllWorkerServices } from './serviceService';
+import { getAllExpenses, getTotalExpenses } from './expenseService';
+import { getAllWorkerAttendanceForDate } from './attendanceService';
 
 export interface DashboardStats {
   totalWorkers: number;
@@ -11,6 +13,10 @@ export interface DashboardStats {
   approvedAppointments: number;
   completedAppointments: number;
   cancelledAppointments: number;
+  todayRevenue: number;
+  todayExpenses: number;
+  totalExpenses: number;
+  todayWorkingEmployees: number;
 }
 
 export interface DailyRevenue {
@@ -60,6 +66,37 @@ export async function getDashboardStats(
     .filter((apt) => apt.status === 'completed')
     .reduce((sum, apt) => sum + apt.totalPrice, 0);
 
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+
+  // Get today's revenue
+  const todayRevenue = appointments
+    .filter((apt) => {
+      const aptDate = new Date(apt.dateTime).toISOString().split('T')[0];
+      return aptDate === today && apt.status === 'completed';
+    })
+    .reduce((sum, apt) => sum + apt.totalPrice, 0);
+
+  // Get expenses data
+  const allExpenses = await getAllExpenses(ownerId);
+  const todayExpenses = allExpenses
+    .filter((expense) => expense.date === today)
+    .reduce((sum, expense) => sum + expense.amount, 0);
+
+  const totalExpenses = await getTotalExpenses(ownerId);
+
+  // Get today's working employees (from attendance)
+  // Working = arrived but not left yet
+  const todayAttendance = await getAllWorkerAttendanceForDate(ownerId, today);
+  const todayWorkingEmployees = Array.from(todayAttendance.values()).filter(
+    (attendance) => {
+      const hasArrived = attendance.arrivalTime !== null && attendance.arrivalTime !== undefined;
+      const hasLeft = attendance.departureTime !== null && attendance.departureTime !== undefined;
+      // Working = arrived but NOT left
+      return hasArrived && !hasLeft;
+    }
+  ).length;
+
   return {
     totalWorkers: workers.length,
     totalCustomers: uniqueCustomers.size,
@@ -69,6 +106,10 @@ export async function getDashboardStats(
     approvedAppointments,
     completedAppointments,
     cancelledAppointments,
+    todayRevenue,
+    todayExpenses,
+    totalExpenses,
+    todayWorkingEmployees,
   };
 }
 
