@@ -172,11 +172,11 @@ export async function getWorkerAttendanceStats(
         // Work day only if both arrived AND left
         if (hasArrival && hasDeparture) {
           workDays++;
-        } else if (!hasArrival && !hasDeparture) {
-          // Absent day only if neither arrived nor left
+        } else if (!hasArrival) {
+          // Absent only if NO arrival time at all
           absentDays++;
         }
-        // If only arrived but not left, it doesn't count as work day or absent day
+        // If arrived but not left yet, don't count as work day or absent
       }
     }
   }

@@ -38,10 +38,23 @@ export function AdminAttendance({ workers, ownerId }: AdminAttendanceProps) {
   const loadAttendanceData = async () => {
     try {
       setLoading(true);
-      const attendanceMap = await attendanceService.getAllWorkerAttendanceForDate(
+      let attendanceMap = await attendanceService.getAllWorkerAttendanceForDate(
         ownerId,
         selectedDate
       );
+
+      // Create attendance records for workers who don't have one for this date
+      for (const worker of workers) {
+        if (!attendanceMap.has(worker.firebaseId)) {
+          const newRecord = await attendanceService.getOrCreateAttendance(
+            ownerId,
+            worker.firebaseId,
+            selectedDate
+          );
+          attendanceMap.set(worker.firebaseId, newRecord);
+        }
+      }
+
       setAttendanceMap(attendanceMap);
     } catch (error) {
       console.error('Error loading attendance data:', error);

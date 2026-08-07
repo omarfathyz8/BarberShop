@@ -59,17 +59,12 @@ export function WorkerAttendanceCard({ ownerId, workerId }: WorkerAttendanceCard
     );
   }
 
-  console.log('[WorkerAttendanceCard] todayAttendance:', todayAttendance);
-  console.log('[WorkerAttendanceCard] ownerId:', ownerId, 'workerId:', workerId);
-
   const status = todayAttendance && todayAttendance.arrivalTime !== null && todayAttendance.arrivalTime !== undefined
     ? getAttendanceStatus(
         todayAttendance.arrivalTime,
         todayAttendance.departureTime === undefined ? null : todayAttendance.departureTime
       )
     : 'absent';
-
-  console.log('[WorkerAttendanceCard] status:', status);
 
   const workedHours = todayAttendance && todayAttendance.arrivalTime !== null
     ? calculateWorkedHours(

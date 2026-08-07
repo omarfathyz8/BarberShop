@@ -19,9 +19,7 @@ export function getRatingStars(average: number): number {
 }
 
 export function getFilledStars(ratings: any): number {
-  console.log('getFilledStars input:', ratings);
   const average = calculateAverageRating(ratings);
   const filled = Math.round(average);
-  console.log('getFilledStars calc:', { average, filled, ratingsLength: ensureRatingsArray(ratings).length });
   return filled;
 }
